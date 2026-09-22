@@ -10,6 +10,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null)
 
+  const roleLabel = (role: string) => {
+  if (role === 'student') return 'Student / Parent'
+  if (role === 'tutor') return 'Tutor'
+  if (role === 'admin') return 'Admin'
+
+  return role
+}
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -57,7 +65,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back, {profile.full_name}!</h1>
-          <p className="text-gray-500 mb-6 capitalize">Logged in as: {profile.role}</p>
+          <p className="text-gray-500 mb-6">Logged in as: {roleLabel(profile.role)}</p>
           <button
             onClick={handleLogout}
             className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300"
