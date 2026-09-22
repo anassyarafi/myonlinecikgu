@@ -4,13 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
   const router = useRouter()
-  const pathname = usePathname()
-  const isAuthPage =
-  pathname === '/login' || pathname === '/signup'
   const [role, setRole] = useState<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
 
@@ -53,7 +49,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
-          {(!isAuthPage || loggedIn) && ( <Link href="/browse" className="text-gray-700 hover:text-blue-600"> 
+          {loggedIn && ( <Link href="/browse" className="text-gray-700 hover:text-blue-600"> 
           Browse Tutors 
           </Link> )}
 
