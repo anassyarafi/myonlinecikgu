@@ -16,11 +16,18 @@ type ClassListing = {
     id: string
     hourly_rate: number
     qualification: string | null
+    tutor_type: string | null
     profiles: { full_name: string } | null
   } | null
 }
 
 type BookingState = 'idle' | 'awaiting_payment' | 'paid'
+
+const tutorTypeLabel = (type: string | null) => {
+  if (type === 'teacher') return 'Teacher'
+  if (type === 'university_student') return 'University Student'
+  return null
+}
 
 export default function BrowsePage() {
   const router = useRouter()
@@ -33,6 +40,7 @@ export default function BrowsePage() {
   const [message, setMessage] = useState('')
   const [subjectFilter, setSubjectFilter] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [tutorTypeFilter, setTutorTypeFilter] = useState('')
   const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({})
 
   useEffect(() => {
@@ -51,7 +59,7 @@ export default function BrowsePage() {
       const { data, error } = await supabase
         .from('classes')
         .select(
-          'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, profiles(full_name))'
+          'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, tutor_type, profiles(full_name))'
         )
         .eq('status', 'open')
         .order('scheduled_at')
@@ -90,6 +98,7 @@ export default function BrowsePage() {
     if (levelFilter && c.subjects?.education_level !== levelFilter) return false
     if (subjectFilter && c.subjects?.name !== subjectFilter) return false
     if (maxPrice && c.price > Number(maxPrice)) return false
+    if (tutorTypeFilter && c.tutor_profiles?.tutor_type !== tutorTypeFilter) return false
     return true
   })
 
@@ -181,6 +190,16 @@ export default function BrowsePage() {
             ))}
           </select>
 
+          <select
+            value={tutorTypeFilter}
+            onChange={(e) => setTutorTypeFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+          >
+            <option value="">All Tutor Types</option>
+            <option value="teacher">Teacher</option>
+            <option value="university_student">University Student</option>
+          </select>
+
           <input
             type="number"
             placeholder="Max price (RM)"
@@ -201,6 +220,7 @@ export default function BrowsePage() {
             {filtered.map((c) => {
               const booking = bookings[c.id]
               const tutorRating = c.tutor_profiles?.id ? ratings[c.tutor_profiles.id] : undefined
+              const typeLabel = tutorTypeLabel(c.tutor_profiles?.tutor_type ?? null)
 
               return (
                 <div key={c.id} className="bg-white rounded-2xl shadow p-6">
@@ -212,6 +232,7 @@ export default function BrowsePage() {
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
                         Tutor: {c.tutor_profiles?.profiles?.full_name ?? 'Unknown'}
+                        {typeLabel ? ` · ${typeLabel}` : ''}
                         {c.tutor_profiles?.qualification ? ` · ${c.tutor_profiles.qualification}` : ''}
                         {tutorRating && (
                           <> · ⭐ {tutorRating.avg.toFixed(1)} ({tutorRating.count})</>
