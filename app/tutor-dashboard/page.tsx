@@ -35,6 +35,7 @@ export default function TutorDashboard() {
   const [bio, setBio] = useState('')
   const [qualification, setQualification] = useState('')
   const [hourlyRate, setHourlyRate] = useState('')
+  const [tutorType, setTutorType] = useState('')
   const [profileSaved, setProfileSaved] = useState(false)
 
   const [subjects, setSubjects] = useState<Subject[]>([])
@@ -75,7 +76,7 @@ export default function TutorDashboard() {
 
       const { data: tutorProfile } = await supabase
         .from('tutor_profiles')
-        .select('bio, qualification, hourly_rate')
+        .select('bio, qualification, hourly_rate, tutor_type')
         .eq('id', user.id)
         .single()
 
@@ -83,6 +84,7 @@ export default function TutorDashboard() {
         setBio(tutorProfile.bio || '')
         setQualification(tutorProfile.qualification || '')
         setHourlyRate(String(tutorProfile.hourly_rate ?? ''))
+        setTutorType(tutorProfile.tutor_type || '')
         setProfileSaved(true)
       }
 
@@ -121,18 +123,21 @@ export default function TutorDashboard() {
     e.preventDefault()
     if (!userId) return
 
+    const wasAlreadySaved = profileSaved
+
     const { error } = await supabase.from('tutor_profiles').upsert({
       id: userId,
       bio,
       qualification,
       hourly_rate: Number(hourlyRate) || 0,
+      tutor_type: tutorType,
     })
 
     if (error) {
       setMessage(error.message)
     } else {
       setProfileSaved(true)
-      setMessage('Profile saved!')
+      setMessage(wasAlreadySaved ? 'Profile updated!' : 'Profile saved!')
     }
   }
 
@@ -310,6 +315,34 @@ export default function TutorDashboard() {
           <h2 className="text-xl font-semibold mb-4">Your Tutor Profile</h2>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">I am a...</label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTutorType('teacher')}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium ${
+                    tutorType === 'teacher'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 text-gray-700'
+                  }`}
+                >
+                  Teacher
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTutorType('university_student')}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium ${
+                    tutorType === 'university_student'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 text-gray-700'
+                  }`}
+                >
+                  University Student
+                </button>
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
               <textarea
                 value={bio}
@@ -340,6 +373,7 @@ export default function TutorDashboard() {
               {profileSaved ? 'Update Profile' : 'Save Profile'}
             </button>
           </form>
+          {message && <p className="text-sm text-gray-600 mt-3">{message}</p>}
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
@@ -397,8 +431,6 @@ export default function TutorDashboard() {
             </button>
           </form>
         </div>
-
-        {message && <p className="text-sm text-gray-600">{message}</p>}
 
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Your Classes</h2>
