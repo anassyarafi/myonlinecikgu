@@ -38,6 +38,13 @@ export default function TutorDashboard() {
   const [tutorType, setTutorType] = useState('')
   const [profileSaved, setProfileSaved] = useState(false)
 
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null)
+  const [profilePhotoSignedUrl, setProfilePhotoSignedUrl] = useState<string | null>(null)
+  const [verificationDocPath, setVerificationDocPath] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState('')
+
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
   const [title, setTitle] = useState('')
@@ -49,6 +56,11 @@ export default function TutorDashboard() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([])
 
   const [message, setMessage] = useState('')
+
+  const refreshPhotoUrl = async (path: string) => {
+    const { data } = await supabase.storage.from('tutor-uploads').createSignedUrl(path, 3600)
+    if (data) setProfilePhotoSignedUrl(data.signedUrl)
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -76,7 +88,7 @@ export default function TutorDashboard() {
 
       const { data: tutorProfile } = await supabase
         .from('tutor_profiles')
-        .select('bio, qualification, hourly_rate, tutor_type')
+        .select('bio, qualification, hourly_rate, tutor_type, profile_photo_url, verification_document_url')
         .eq('id', user.id)
         .single()
 
@@ -86,6 +98,14 @@ export default function TutorDashboard() {
         setHourlyRate(String(tutorProfile.hourly_rate ?? ''))
         setTutorType(tutorProfile.tutor_type || '')
         setProfileSaved(true)
+
+        if (tutorProfile.profile_photo_url) {
+          setProfilePhotoPath(tutorProfile.profile_photo_url)
+          refreshPhotoUrl(tutorProfile.profile_photo_url)
+        }
+        if (tutorProfile.verification_document_url) {
+          setVerificationDocPath(tutorProfile.verification_document_url)
+        }
       }
 
       const { data: subjectsData } = await supabase.from('subjects').select('*').order('name')
@@ -118,6 +138,71 @@ export default function TutorDashboard() {
 
     init()
   }, [router])
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+
+    setUploadingPhoto(true)
+    setUploadMessage('')
+
+    const path = `${userId}/photo-${Date.now()}-${file.name}`
+    const { error: uploadError } = await supabase.storage.from('tutor-uploads').upload(path, file)
+
+    if (uploadError) {
+      setUploadMessage(uploadError.message)
+      setUploadingPhoto(false)
+      return
+    }
+
+    const { error: dbError } = await supabase
+      .from('tutor_profiles')
+      .update({ profile_photo_url: path })
+      .eq('id', userId)
+
+    if (dbError) {
+      setUploadMessage(dbError.message)
+      setUploadingPhoto(false)
+      return
+    }
+
+    setProfilePhotoPath(path)
+    await refreshPhotoUrl(path)
+    setUploadMessage('Profile photo uploaded!')
+    setUploadingPhoto(false)
+  }
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+
+    setUploadingDoc(true)
+    setUploadMessage('')
+
+    const path = `${userId}/verification-${Date.now()}-${file.name}`
+    const { error: uploadError } = await supabase.storage.from('tutor-uploads').upload(path, file)
+
+    if (uploadError) {
+      setUploadMessage(uploadError.message)
+      setUploadingDoc(false)
+      return
+    }
+
+    const { error: dbError } = await supabase
+      .from('tutor_profiles')
+      .update({ verification_document_url: path })
+      .eq('id', userId)
+
+    if (dbError) {
+      setUploadMessage(dbError.message)
+      setUploadingDoc(false)
+      return
+    }
+
+    setVerificationDocPath(path)
+    setUploadMessage('Verification document uploaded!')
+    setUploadingDoc(false)
+  }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -309,6 +394,50 @@ export default function TutorDashboard() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Verification Documents</h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+              {profilePhotoSignedUrl && (
+                <img
+                  src={profilePhotoSignedUrl}
+                  alt="Profile"
+                  className="w-20 h-20 rounded-full object-cover mb-2 border border-gray-200"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                disabled={uploadingPhoto}
+                className="text-sm"
+              />
+              {uploadingPhoto && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Verification Document (e.g. degree certificate, IC)
+              </label>
+              {verificationDocPath && (
+                <p className="text-sm text-green-600 mb-2">✓ Document uploaded</p>
+              )}
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleDocUpload}
+                disabled={uploadingDoc}
+                className="text-sm"
+              />
+              {uploadingDoc && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+            </div>
+
+            {uploadMessage && <p className="text-sm text-gray-600">{uploadMessage}</p>}
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
