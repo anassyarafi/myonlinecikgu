@@ -23,6 +23,8 @@ type PayoutRow = {
   requested_at: string
 }
 
+const PLATFORM_COMMISSION_RATE = 0.15
+
 export default function TutorDashboard() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -193,14 +195,17 @@ export default function TutorDashboard() {
   }
 
   const paidBookings = bookings.filter((b) => b.payment_status === 'paid')
-  const totalEarnings = paidBookings.reduce((sum, b) => sum + (b.classes?.price || 0), 0)
+  const grossEarnings = paidBookings.reduce((sum, b) => sum + (b.classes?.price || 0), 0)
+  const platformCommission = grossEarnings * PLATFORM_COMMISSION_RATE
+  const netPayable = grossEarnings - platformCommission
+
   const now = new Date()
   const upcomingCount = classes.filter((c) => new Date(c.scheduled_at) >= now).length
   const completedCount = classes.filter((c) => new Date(c.scheduled_at) < now).length
   const activeStudents = new Set(paidBookings.map((b) => b.student_id)).size
 
   const totalRequested = payouts.reduce((sum, p) => sum + p.amount, 0)
-  const availableForPayout = totalEarnings - totalRequested
+  const availableForPayout = netPayable - totalRequested
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
@@ -211,8 +216,8 @@ export default function TutorDashboard() {
           <h2 className="text-xl font-semibold mb-4">Earnings Dashboard</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-gray-500">Total Earnings</p>
-              <p className="text-2xl font-bold text-blue-600">RM{totalEarnings}</p>
+              <p className="text-sm text-gray-500">Gross Earnings</p>
+              <p className="text-2xl font-bold text-blue-600">RM{grossEarnings.toFixed(2)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-500">Active Students</p>
@@ -246,11 +251,27 @@ export default function TutorDashboard() {
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Payouts</h2>
+          <h2 className="text-xl font-semibold mb-4">Commission & Payouts</h2>
+
+          <div className="space-y-2 text-sm mb-4">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Gross Earnings</span>
+              <span className="font-medium">RM{grossEarnings.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Platform Commission ({(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}%)</span>
+              <span>- RM{platformCommission.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
+              <span>Net Payable to You</span>
+              <span>RM{netPayable.toFixed(2)}</span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between bg-green-50 rounded-lg p-4 mb-4">
             <div>
               <p className="text-sm text-gray-500">Available for Payout</p>
-              <p className="text-2xl font-bold text-green-700">RM{availableForPayout}</p>
+              <p className="text-2xl font-bold text-green-700">RM{availableForPayout.toFixed(2)}</p>
             </div>
             <button
               onClick={() => handleRequestPayout(availableForPayout)}
@@ -267,7 +288,7 @@ export default function TutorDashboard() {
             <ul className="space-y-2">
               {payouts.map((p) => (
                 <li key={p.id} className="flex justify-between border border-gray-200 rounded-lg p-3 text-sm">
-                  <span>RM{p.amount} · requested {new Date(p.requested_at).toLocaleDateString()}</span>
+                  <span>RM{p.amount.toFixed(2)} · requested {new Date(p.requested_at).toLocaleDateString()}</span>
                   <span
                     className={`font-medium capitalize ${
                       p.status === 'paid'

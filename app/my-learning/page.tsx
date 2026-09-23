@@ -57,35 +57,63 @@ export default function MyLearningPage() {
       }
 
       setUserId(user.id)
-
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(
-          'id, payment_status, booking_status, classes(title, scheduled_at, price, subjects(name), tutor_profiles(id, profiles(full_name))), attendance(attended, notes)'
-        )
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (!error && data) {
-        setRecords(data as unknown as LearningRecord[])
-      }
-
-      const { data: reviewsData } = await supabase
-        .from('reviews')
-        .select('booking_id, rating, comment')
-        .eq('student_id', user.id)
-
-      const reviewMap: Record<string, ReviewRow> = {}
-      ;(reviewsData || []).forEach((r) => {
-        reviewMap[r.booking_id] = r
-      })
-      setReviews(reviewMap)
-
+      await loadRecords(user.id)
       setLoading(false)
     }
 
     init()
   }, [router])
+
+  const loadRecords = async (uid: string) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(
+        'id, payment_status, booking_status, classes(title, scheduled_at, price, subjects(name), tutor_profiles(id, profiles(full_name))), attendance(attended, notes)'
+      )
+      .eq('student_id', uid)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) {
+      setRecords(data as unknown as LearningRecord[])
+    }
+
+    const { data: reviewsData } = await supabase
+      .from('reviews')
+      .select('booking_id, rating, comment')
+      .eq('student_id', uid)
+
+    const reviewMap: Record<string, ReviewRow> = {}
+    ;(reviewsData || []).forEach((r) => {
+      reviewMap[r.booking_id] = r
+    })
+    setReviews(reviewMap)
+  }
+
+  const handleCancelBooking = async (bookingId: string, wasPaid: boolean) => {
+    setMessage('')
+
+    const { error } = await supabase
+      .from('bookings')
+      .update({
+        booking_status: 'cancelled',
+        payment_status: wasPaid ? 'refunded' : 'pending',
+      })
+      .eq('id', bookingId)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.id === bookingId
+          ? { ...r, booking_status: 'cancelled', payment_status: wasPaid ? 'refunded' : r.payment_status }
+          : r
+      )
+    )
+    setMessage(wasPaid ? 'Booking cancelled and refunded.' : 'Booking cancelled.')
+  }
 
   const handleSubmitReview = async (bookingId: string, tutorId: string | undefined) => {
     if (!userId || !tutorId) return
@@ -164,6 +192,11 @@ export default function MyLearningPage() {
                 const attendance = r.attendance[0]
                 const existingReview = reviews[r.id]
                 const tutorId = r.classes?.tutor_profiles?.id
+                const isCancelled = r.booking_status === 'cancelled'
+                const isUpcoming = r.classes?.scheduled_at
+                  ? new Date(r.classes.scheduled_at) > new Date()
+                  : false
+                const canCancel = isUpcoming && !isCancelled
 
                 return (
                   <li key={r.id} className="border border-gray-200 rounded-lg p-4">
@@ -179,74 +212,97 @@ export default function MyLearningPage() {
                             new Date(r.classes.scheduled_at).toLocaleString()}
                         </p>
                       </div>
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          attendance?.attended
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {attendance?.attended ? 'Attended' : 'Not marked'}
-                      </span>
+                      <div className="text-right">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            isCancelled
+                              ? 'bg-red-100 text-red-700'
+                              : attendance?.attended
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {isCancelled
+                            ? `Cancelled${r.payment_status === 'refunded' ? ' · Refunded' : ''}`
+                            : attendance?.attended
+                            ? 'Attended'
+                            : 'Not marked'}
+                        </span>
+                      </div>
                     </div>
 
-                    {attendance?.notes && (
+                    {attendance?.notes && !isCancelled && (
                       <p className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2">
                         Notes: {attendance.notes}
                       </p>
                     )}
 
-                    <div className="mt-3 border-t border-gray-100 pt-3">
-                      {r.payment_status !== 'paid' ? (
-                        <p className="text-xs text-gray-400">Rating available after payment.</p>
-                      ) : existingReview ? (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            Your rating: {'★'.repeat(existingReview.rating)}
-                            {'☆'.repeat(5 - existingReview.rating)}
-                          </p>
-                          {existingReview.comment && (
-                            <p className="text-sm text-gray-500 mt-1">{existingReview.comment}</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() =>
-                                  setRatingInputs((prev) => ({ ...prev, [r.id]: star }))
-                                }
-                                className={`text-xl ${
-                                  (ratingInputs[r.id] || 0) >= star
-                                    ? 'text-yellow-400'
-                                    : 'text-gray-300'
-                                }`}
-                              >
-                                ★
-                              </button>
-                            ))}
+                    {canCancel && (
+                      <div className="mt-3 border-t border-gray-100 pt-3">
+                        <button
+                          onClick={() =>
+                            handleCancelBooking(r.id, r.payment_status === 'paid')
+                          }
+                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Cancel Booking{r.payment_status === 'paid' ? ' & Request Refund' : ''}
+                        </button>
+                      </div>
+                    )}
+
+                    {!isCancelled && (
+                      <div className="mt-3 border-t border-gray-100 pt-3">
+                        {r.payment_status !== 'paid' ? (
+                          <p className="text-xs text-gray-400">Rating available after payment.</p>
+                        ) : existingReview ? (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">
+                              Your rating: {'★'.repeat(existingReview.rating)}
+                              {'☆'.repeat(5 - existingReview.rating)}
+                            </p>
+                            {existingReview.comment && (
+                              <p className="text-sm text-gray-500 mt-1">{existingReview.comment}</p>
+                            )}
                           </div>
-                          <input
-                            type="text"
-                            placeholder="Leave a comment (optional)"
-                            value={commentInputs[r.id] || ''}
-                            onChange={(e) =>
-                              setCommentInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
-                            }
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
-                          />
-                          <button
-                            onClick={() => handleSubmitReview(r.id, tutorId)}
-                            className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700"
-                          >
-                            Submit Review
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() =>
+                                    setRatingInputs((prev) => ({ ...prev, [r.id]: star }))
+                                  }
+                                  className={`text-xl ${
+                                    (ratingInputs[r.id] || 0) >= star
+                                      ? 'text-yellow-400'
+                                      : 'text-gray-300'
+                                  }`}
+                                >
+                                  ★
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Leave a comment (optional)"
+                              value={commentInputs[r.id] || ''}
+                              onChange={(e) =>
+                                setCommentInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
+                              }
+                              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                            />
+                            <button
+                              onClick={() => handleSubmitReview(r.id, tutorId)}
+                              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700"
+                            >
+                              Submit Review
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 )
               })}
