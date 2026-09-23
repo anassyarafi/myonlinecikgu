@@ -16,7 +16,7 @@ type BookingRow = {
   payment_status: string
   booking_status: string
   profiles: { full_name: string } | null
-  classes: { title: string } | null
+  classes: { title: string; price: number } | null
 }
 
 export default function AdminPage() {
@@ -56,7 +56,7 @@ export default function AdminPage() {
 
       const { data: bookingsData } = await supabase
         .from('bookings')
-        .select('id, payment_status, booking_status, profiles(full_name), classes(title)')
+        .select('id, payment_status, booking_status, profiles(full_name), classes(title, price)')
         .order('created_at', { ascending: false })
       setBookings((bookingsData as unknown as BookingRow[]) || [])
 
@@ -87,6 +87,13 @@ export default function AdminPage() {
     )
   }
 
+  const refunds = bookings.filter(
+    (b) => b.booking_status === 'cancelled' || b.payment_status === 'refunded'
+  )
+  const totalRefunded = refunds
+    .filter((b) => b.payment_status === 'refunded')
+    .reduce((sum, b) => sum + (b.classes?.price || 0), 0)
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -112,6 +119,34 @@ export default function AdminPage() {
                   >
                     {t.verified ? 'Verified ✓' : 'Verify'}
                   </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Refunds & Cancellations</h2>
+            <span className="text-sm font-medium text-red-600">
+              Total refunded: RM{totalRefunded.toFixed(2)}
+            </span>
+          </div>
+          {refunds.length === 0 ? (
+            <p className="text-gray-500 text-sm">No cancellations or refunds yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {refunds.map((b) => (
+                <li key={b.id} className="border border-gray-200 rounded-lg p-3 text-sm">
+                  <p className="font-medium">{b.classes?.title}</p>
+                  <p className="text-gray-500">
+                    {b.profiles?.full_name} · RM{b.classes?.price} ·{' '}
+                    <span className={b.payment_status === 'refunded' ? 'text-red-600 font-medium' : ''}>
+                      {b.payment_status === 'refunded' ? 'Refunded' : b.payment_status}
+                    </span>
+                    {' · '}
+                    {b.booking_status}
+                  </p>
                 </li>
               ))}
             </ul>
