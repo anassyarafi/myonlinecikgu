@@ -13,16 +13,27 @@ type LearningRecord = {
     scheduled_at: string
     price: number
     subjects: { name: string } | null
-    tutor_profiles: { profiles: { full_name: string } | null } | null
+    tutor_profiles: { id: string; profiles: { full_name: string } | null } | null
   } | null
   attendance: { attended: boolean; notes: string | null }[]
+}
+
+type ReviewRow = {
+  booking_id: string
+  rating: number
+  comment: string | null
 }
 
 export default function MyLearningPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
   const [notStudent, setNotStudent] = useState(false)
   const [records, setRecords] = useState<LearningRecord[]>([])
+  const [reviews, setReviews] = useState<Record<string, ReviewRow>>({})
+  const [ratingInputs, setRatingInputs] = useState<Record<string, number>>({})
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -45,10 +56,12 @@ export default function MyLearningPage() {
         return
       }
 
+      setUserId(user.id)
+
       const { data, error } = await supabase
         .from('bookings')
         .select(
-          'id, payment_status, booking_status, classes(title, scheduled_at, price, subjects(name), tutor_profiles(profiles(full_name))), attendance(attended, notes)'
+          'id, payment_status, booking_status, classes(title, scheduled_at, price, subjects(name), tutor_profiles(id, profiles(full_name))), attendance(attended, notes)'
         )
         .eq('student_id', user.id)
         .order('created_at', { ascending: false })
@@ -57,11 +70,51 @@ export default function MyLearningPage() {
         setRecords(data as unknown as LearningRecord[])
       }
 
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('booking_id, rating, comment')
+        .eq('student_id', user.id)
+
+      const reviewMap: Record<string, ReviewRow> = {}
+      ;(reviewsData || []).forEach((r) => {
+        reviewMap[r.booking_id] = r
+      })
+      setReviews(reviewMap)
+
       setLoading(false)
     }
 
     init()
   }, [router])
+
+  const handleSubmitReview = async (bookingId: string, tutorId: string | undefined) => {
+    if (!userId || !tutorId) return
+    const rating = ratingInputs[bookingId]
+    if (!rating) {
+      setMessage('Please select a star rating first.')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert({
+        booking_id: bookingId,
+        student_id: userId,
+        tutor_id: tutorId,
+        rating,
+        comment: commentInputs[bookingId] || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setReviews((prev) => ({ ...prev, [bookingId]: data }))
+    setMessage('Review submitted!')
+  }
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -99,6 +152,8 @@ export default function MyLearningPage() {
           </div>
         </div>
 
+        {message && <p className="text-sm text-blue-600">{message}</p>}
+
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Class History</h2>
           {records.length === 0 ? (
@@ -107,6 +162,9 @@ export default function MyLearningPage() {
             <ul className="space-y-3">
               {records.map((r) => {
                 const attendance = r.attendance[0]
+                const existingReview = reviews[r.id]
+                const tutorId = r.classes?.tutor_profiles?.id
+
                 return (
                   <li key={r.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start">
@@ -131,11 +189,64 @@ export default function MyLearningPage() {
                         {attendance?.attended ? 'Attended' : 'Not marked'}
                       </span>
                     </div>
+
                     {attendance?.notes && (
                       <p className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2">
                         Notes: {attendance.notes}
                       </p>
                     )}
+
+                    <div className="mt-3 border-t border-gray-100 pt-3">
+                      {r.payment_status !== 'paid' ? (
+                        <p className="text-xs text-gray-400">Rating available after payment.</p>
+                      ) : existingReview ? (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Your rating: {'★'.repeat(existingReview.rating)}
+                            {'☆'.repeat(5 - existingReview.rating)}
+                          </p>
+                          {existingReview.comment && (
+                            <p className="text-sm text-gray-500 mt-1">{existingReview.comment}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() =>
+                                  setRatingInputs((prev) => ({ ...prev, [r.id]: star }))
+                                }
+                                className={`text-xl ${
+                                  (ratingInputs[r.id] || 0) >= star
+                                    ? 'text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Leave a comment (optional)"
+                            value={commentInputs[r.id] || ''}
+                            onChange={(e) =>
+                              setCommentInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                          />
+                          <button
+                            onClick={() => handleSubmitReview(r.id, tutorId)}
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700"
+                          >
+                            Submit Review
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </li>
                 )
               })}

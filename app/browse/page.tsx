@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -13,6 +13,7 @@ type ClassListing = {
   status: string
   subjects: { name: string; education_level: string } | null
   tutor_profiles: {
+    id: string
     hourly_rate: number
     qualification: string | null
     profiles: { full_name: string } | null
@@ -30,6 +31,9 @@ export default function BrowsePage() {
   const [role, setRole] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Record<string, { id: string; state: BookingState }>>({})
   const [message, setMessage] = useState('')
+  const [subjectFilter, setSubjectFilter] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({})
 
   useEffect(() => {
     const init = async () => {
@@ -47,7 +51,7 @@ export default function BrowsePage() {
       const { data, error } = await supabase
         .from('classes')
         .select(
-          'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(hourly_rate, qualification, profiles(full_name))'
+          'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, profiles(full_name))'
         )
         .eq('status', 'open')
         .order('scheduled_at')
@@ -55,15 +59,39 @@ export default function BrowsePage() {
       if (!error && data) {
         setClasses(data as unknown as ClassListing[])
       }
+
+      const { data: reviewsData } = await supabase.from('reviews').select('tutor_id, rating')
+      if (reviewsData) {
+        const grouped: Record<string, number[]> = {}
+        reviewsData.forEach((r) => {
+          if (!grouped[r.tutor_id]) grouped[r.tutor_id] = []
+          grouped[r.tutor_id].push(r.rating)
+        })
+        const avgMap: Record<string, { avg: number; count: number }> = {}
+        Object.entries(grouped).forEach(([tutorId, ratingsArr]) => {
+          const sum = ratingsArr.reduce((a, b) => a + b, 0)
+          avgMap[tutorId] = { avg: sum / ratingsArr.length, count: ratingsArr.length }
+        })
+        setRatings(avgMap)
+      }
+
       setLoading(false)
     }
 
     init()
   }, [])
 
-  const filtered = levelFilter
-    ? classes.filter((c) => c.subjects?.education_level === levelFilter)
-    : classes
+  const subjectOptions = useMemo(() => {
+    const names = classes.map((c) => c.subjects?.name).filter(Boolean) as string[]
+    return Array.from(new Set(names)).sort()
+  }, [classes])
+
+  const filtered = classes.filter((c) => {
+    if (levelFilter && c.subjects?.education_level !== levelFilter) return false
+    if (subjectFilter && c.subjects?.name !== subjectFilter) return false
+    if (maxPrice && c.price > Number(maxPrice)) return false
+    return true
+  })
 
   const handleBookNow = async (classId: string) => {
     setMessage('')
@@ -139,6 +167,29 @@ export default function BrowsePage() {
           ))}
         </div>
 
+        <div className="flex gap-3 flex-wrap">
+          <select
+            value={subjectFilter}
+            onChange={(e) => setSubjectFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+          >
+            <option value="">All Subjects</option>
+            {subjectOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Max price (RM)"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-40"
+          />
+        </div>
+
         {message && <p className="text-sm text-blue-600">{message}</p>}
 
         {loading ? (
@@ -149,6 +200,8 @@ export default function BrowsePage() {
           <div className="space-y-4">
             {filtered.map((c) => {
               const booking = bookings[c.id]
+              const tutorRating = c.tutor_profiles?.id ? ratings[c.tutor_profiles.id] : undefined
+
               return (
                 <div key={c.id} className="bg-white rounded-2xl shadow p-6">
                   <div className="flex justify-between items-start">
@@ -160,6 +213,9 @@ export default function BrowsePage() {
                       <p className="text-sm text-gray-500 mt-1">
                         Tutor: {c.tutor_profiles?.profiles?.full_name ?? 'Unknown'}
                         {c.tutor_profiles?.qualification ? ` · ${c.tutor_profiles.qualification}` : ''}
+                        {tutorRating && (
+                          <> · ⭐ {tutorRating.avg.toFixed(1)} ({tutorRating.count})</>
+                        )}
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
                         {new Date(c.scheduled_at).toLocaleString()}
@@ -186,19 +242,17 @@ export default function BrowsePage() {
                         </button>
                       )}
 
-                    {booking?.state === 'paid' && (
-  <div className="mt-2">
-    <p className="text-green-600 font-medium text-sm">
-      ✓ Booked & Paid
-    </p>
-
-    <Link
-      href={`/classroom/${booking.id}`}
-      className="text-blue-600 underline text-sm">
-      Enter Classroom
-    </Link>
-  </div>
-)}
+                      {booking?.state === 'paid' && (
+                        <div className="mt-2">
+                          <p className="text-green-600 font-medium text-sm">✓ Booked & Paid</p>
+                          <Link
+                            href={`/classroom/${booking.id}`}
+                            className="text-blue-600 underline text-sm"
+                          >
+                            Enter Classroom
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
