@@ -4,17 +4,20 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const router = useRouter()
   const [role, setRole] = useState<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setLoggedIn(true)
+        setCurrentUserId(user.id)
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -38,6 +41,7 @@ export default function Navbar() {
     await supabase.auth.signOut()
     setLoggedIn(false)
     setRole(null)
+    setCurrentUserId(null)
     router.push('/')
   }
 
@@ -49,9 +53,11 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
-          {loggedIn && ( <Link href="/browse" className="text-gray-700 hover:text-blue-600"> 
-          Browse Tutors 
-          </Link> )}
+          {loggedIn && (
+            <Link href="/browse" className="text-gray-700 hover:text-blue-600">
+              Browse Tutors
+            </Link>
+          )}
 
           {role === 'tutor' && (
             <Link href="/tutor-dashboard" className="text-gray-700 hover:text-blue-600">
@@ -70,6 +76,8 @@ export default function Navbar() {
               Admin
             </Link>
           )}
+
+          <NotificationBell userId={currentUserId} />
 
           {loggedIn ? (
             <button

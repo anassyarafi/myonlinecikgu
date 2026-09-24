@@ -90,6 +90,14 @@ export default function MyLearningPage() {
   }
 
   const handleCancelBooking = async (bookingId: string, wasPaid: boolean) => {
+    const cancelledRecord = records.find((r) => r.id === bookingId)
+if (cancelledRecord?.classes?.tutor_profiles?.id) {
+  await supabase.from('notifications').insert({
+    user_id: cancelledRecord.classes.tutor_profiles.id,
+    title: 'Booking Cancelled',
+    message: `A student cancelled their booking for "${cancelledRecord.classes.title}".${wasPaid ? ' Refund processed.' : ''}`,
+  })
+}
     setMessage('')
 
     const { error } = await supabase

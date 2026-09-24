@@ -67,13 +67,21 @@ export default function AdminPage() {
   }, [router])
 
   const toggleVerify = async (tutorId: string, current: boolean) => {
-    const { error } = await supabase.from('tutor_profiles').update({ verified: !current }).eq('id', tutorId)
-    if (error) {
-      setMessage(error.message)
-      return
-    }
-    setTutors((prev) => prev.map((t) => (t.id === tutorId ? { ...t, verified: !current } : t)))
+  const { error } = await supabase.from('tutor_profiles').update({ verified: !current }).eq('id', tutorId)
+  if (error) {
+    setMessage(error.message)
+    return
   }
+  setTutors((prev) => prev.map((t) => (t.id === tutorId ? { ...t, verified: !current } : t)))
+
+  if (!current) {
+    await supabase.from('notifications').insert({
+      user_id: tutorId,
+      title: 'Account Verified',
+      message: 'Congratulations! Your tutor account has been verified by our admin team.',
+    })
+  }
+}
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>

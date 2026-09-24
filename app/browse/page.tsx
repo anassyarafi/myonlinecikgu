@@ -132,6 +132,15 @@ export default function BrowsePage() {
     }
 
     setBookings((prev) => ({ ...prev, [classId]: { id: data.id, state: 'awaiting_payment' } }))
+
+    const bookedClass = classes.find((c) => c.id === classId)
+    if (bookedClass?.tutor_profiles?.id) {
+      await supabase.from('notifications').insert({
+        user_id: bookedClass.tutor_profiles.id,
+        title: 'New Booking',
+        message: `A student booked your class "${bookedClass.title}".`,
+      })
+    }
   }
 
   const handleConfirmPayment = async (classId: string) => {
@@ -150,6 +159,15 @@ export default function BrowsePage() {
 
     setBookings((prev) => ({ ...prev, [classId]: { ...prev[classId], state: 'paid' } }))
     setMessage('Payment confirmed! Class booked.')
+
+    const paidClass = classes.find((c) => c.id === classId)
+    if (paidClass?.tutor_profiles?.id) {
+      await supabase.from('notifications').insert({
+        user_id: paidClass.tutor_profiles.id,
+        title: 'Payment Received',
+        message: `Payment confirmed for "${paidClass.title}". RM${paidClass.price} added to your earnings.`,
+      })
+    }
   }
 
   return (
