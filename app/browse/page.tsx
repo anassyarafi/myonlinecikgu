@@ -171,22 +171,27 @@ export default function BrowsePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
+    <div className="min-h-screen bg-[#F6F3EC] px-4 py-10">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Find a Tutor</h1>
-          <p className="text-gray-500">Browse available classes</p>
+          <h1
+            className="text-3xl font-semibold text-[#1C3529]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Find a Tutor
+          </h1>
+          <p className="text-[#4A4437]">Browse available classes</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {['', 'primary', 'secondary', 'university'].map((level) => (
             <button
               key={level}
               onClick={() => setLevelFilter(level)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${
+              className={`px-4 py-2 rounded-full text-sm font-medium border ${
                 levelFilter === level
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300'
+                  ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
+                  : 'bg-white text-[#1C3529] border-[#D8D2C4]'
               }`}
             >
               {level === '' ? 'All Levels' : level.charAt(0).toUpperCase() + level.slice(1)}
@@ -198,7 +203,7 @@ export default function BrowsePage() {
           <select
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            className="px-3 py-2 rounded-lg border border-[#D8D2C4] text-sm bg-white"
           >
             <option value="">All Subjects</option>
             {subjectOptions.map((name) => (
@@ -211,7 +216,7 @@ export default function BrowsePage() {
           <select
             value={tutorTypeFilter}
             onChange={(e) => setTutorTypeFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            className="px-3 py-2 rounded-lg border border-[#D8D2C4] text-sm bg-white"
           >
             <option value="">All Tutor Types</option>
             <option value="teacher">Teacher</option>
@@ -223,16 +228,16 @@ export default function BrowsePage() {
             placeholder="Max price (RM)"
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-40"
+            className="px-3 py-2 rounded-lg border border-[#D8D2C4] text-sm w-40 bg-white"
           />
         </div>
 
-        {message && <p className="text-sm text-blue-600">{message}</p>}
+        {message && <p className="text-sm text-[#2B5D45]">{message}</p>}
 
         {loading ? (
-          <p className="text-gray-500">Loading classes...</p>
+          <p className="text-[#4A4437]">Loading classes...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-gray-500">No classes available yet.</p>
+          <p className="text-[#4A4437]">No classes available yet.</p>
         ) : (
           <div className="space-y-4">
             {filtered.map((c) => {
@@ -241,32 +246,35 @@ export default function BrowsePage() {
               const typeLabel = tutorTypeLabel(c.tutor_profiles?.tutor_type ?? null)
 
               return (
-                <div key={c.id} className="bg-white rounded-2xl shadow p-6">
+                <div key={c.id} className="bg-white border-2 border-[#D8D2C4] rounded-2xl p-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">{c.title}</h2>
-                      <p className="text-sm text-gray-500">
+                      <h2 className="text-lg font-semibold text-[#1C3529]">{c.title}</h2>
+                      <p className="text-sm text-[#4A4437]">
                         {c.subjects?.name} · {c.subjects?.education_level}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-[#4A4437] mt-1">
                         Tutor: {c.tutor_profiles?.profiles?.full_name ?? 'Unknown'}
                         {typeLabel ? ` · ${typeLabel}` : ''}
                         {c.tutor_profiles?.qualification ? ` · ${c.tutor_profiles.qualification}` : ''}
                         {tutorRating && (
-                          <> · ⭐ {tutorRating.avg.toFixed(1)} ({tutorRating.count})</>
+                          <span className="text-[#E3A73B] font-medium">
+                            {' '}
+                            · ★ {tutorRating.avg.toFixed(1)} ({tutorRating.count})
+                          </span>
                         )}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-[#4A4437] mt-1">
                         {new Date(c.scheduled_at).toLocaleString()}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold text-blue-600">RM{c.price}</p>
+                      <p className="text-xl font-semibold text-[#2B5D45]">RM{c.price}</p>
 
                       {!booking && (
                         <button
                           onClick={() => handleBookNow(c.id)}
-                          className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                          className="mt-2 bg-[#2B5D45] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#1F4634]"
                         >
                           Book Now
                         </button>
@@ -275,7 +283,7 @@ export default function BrowsePage() {
                       {booking?.state === 'awaiting_payment' && (
                         <button
                           onClick={() => handleConfirmPayment(c.id)}
-                          className="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+                          className="mt-2 bg-[#E3A73B] text-[#1C3529] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#cf9333]"
                         >
                           Confirm Payment (Mock)
                         </button>
@@ -283,16 +291,16 @@ export default function BrowsePage() {
 
                       {booking?.state === 'paid' && (
                         <div className="mt-2 space-y-1">
-                          <p className="text-green-600 font-medium text-sm">✓ Booked & Paid</p>
+                          <p className="text-[#2B5D45] font-medium text-sm">✓ Booked & Paid</p>
                           <Link
                             href={`/classroom/${booking.id}`}
-                            className="text-blue-600 underline text-sm block"
+                            className="text-[#2B5D45] underline text-sm block"
                           >
                             Enter Classroom
                           </Link>
                           <Link
                             href={`/receipt/${booking.id}`}
-                            className="text-blue-600 underline text-sm block"
+                            className="text-[#2B5D45] underline text-sm block"
                           >
                             View Receipt
                           </Link>

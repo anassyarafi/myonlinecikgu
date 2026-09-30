@@ -48,54 +48,61 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Create your account</h1>
-        <p className="text-gray-500 mb-6">Join MyOnlineCikgu as a tutor or student</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F6F3EC] px-4">
+      <div className="w-full max-w-md bg-white border-2 border-[#D8D2C4] rounded-2xl p-8">
+        <h1
+          className="text-2xl font-semibold text-[#1C3529] mb-1"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Create your account
+        </h1>
+        <p className="text-[#4A4437] mb-6">Join MyOnlineCikgu as a tutor or student</p>
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-[#1C3529] mb-1">Full Name</label>
             <input
               type="text"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-[#1C3529] mb-1">Email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-[#1C3529] mb-1">Password</label>
             <input
               type="password"
               required
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">I am a...</label>
+            <label className="block text-sm font-medium text-[#1C3529] mb-2">I am a...</label>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setRole('student')}
-                className={`flex-1 py-2 rounded-lg border font-medium ${
-                  role === 'student' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700'
+                className={`flex-1 py-2 rounded-full border font-medium ${
+                  role === 'student'
+                    ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
+                    : 'border-[#D8D2C4] text-[#1C3529]'
                 }`}
               >
                 Student / Parent
@@ -103,8 +110,10 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setRole('tutor')}
-                className={`flex-1 py-2 rounded-lg border font-medium ${
-                  role === 'tutor' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700'
+                className={`flex-1 py-2 rounded-full border font-medium ${
+                  role === 'tutor'
+                    ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
+                    : 'border-[#D8D2C4] text-[#1C3529]'
                 }`}
               >
                 Tutor
@@ -112,12 +121,12 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className="text-[#C6503F] text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-[#2B5D45] text-white py-2.5 rounded-full font-medium hover:bg-[#1F4634] disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Sign Up'}
           </button>

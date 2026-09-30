@@ -46,33 +46,33 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3">
+    <nav className="bg-[#FFFFFF] border-b-2 border-[#D8D2C4] px-4 py-3">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
-        <Link href="/" className="font-bold text-blue-600">
+        <Link href="/" className="font-semibold text-lg text-[#2B5D45]" style={{ fontFamily: 'var(--font-display)' }}>
           MyOnlineCikgu
         </Link>
 
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-5 text-sm">
           {loggedIn && (
-            <Link href="/browse" className="text-gray-700 hover:text-blue-600">
+            <Link href="/browse" className="text-[#1C3529] hover:text-[#2B5D45]">
               Browse Tutors
             </Link>
           )}
 
           {role === 'tutor' && (
-            <Link href="/tutor-dashboard" className="text-gray-700 hover:text-blue-600">
+            <Link href="/tutor-dashboard" className="text-[#1C3529] hover:text-[#2B5D45]">
               Tutor Dashboard
             </Link>
           )}
 
           {role === 'student' && (
-            <Link href="/my-learning" className="text-gray-700 hover:text-blue-600">
+            <Link href="/my-learning" className="text-[#1C3529] hover:text-[#2B5D45]">
               My Learning
             </Link>
           )}
 
           {role === 'admin' && (
-            <Link href="/admin" className="text-gray-700 hover:text-blue-600">
+            <Link href="/admin" className="text-[#1C3529] hover:text-[#2B5D45]">
               Admin
             </Link>
           )}
@@ -82,18 +82,18 @@ export default function Navbar() {
           {loggedIn ? (
             <button
               onClick={handleLogout}
-              className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium hover:bg-gray-200"
+              className="border border-[#D8D2C4] text-[#1C3529] px-4 py-1.5 rounded-full font-medium hover:bg-[#F6F3EC]"
             >
               Log out
             </button>
           ) : (
             <>
-              <Link href="/login" className="text-gray-700 hover:text-blue-600">
+              <Link href="/login" className="text-[#1C3529] hover:text-[#2B5D45]">
                 Log In
               </Link>
               <Link
                 href="/signup"
-                className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700"
+                className="bg-[#2B5D45] text-white px-4 py-1.5 rounded-full font-medium hover:bg-[#1F4634]"
               >
                 Sign Up
               </Link>

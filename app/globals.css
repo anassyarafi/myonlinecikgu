@@ -24,3 +24,16 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background-color: #E3A73B;
+  color: #1C3529;
+}
+
+input, textarea, select {
+  color: #1C3529;
+}
