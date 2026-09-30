@@ -41,6 +41,21 @@ export default function SignupPage() {
         setLoading(false)
         return
       }
+
+      const { data: admins } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+
+      if (admins && admins.length > 0) {
+        const roleLabel = role === 'tutor' ? 'tutor' : 'student/parent'
+        const notifications = admins.map((admin) => ({
+          user_id: admin.id,
+          title: 'New Sign-Up',
+          message: `${fullName} joined as a ${roleLabel}.`,
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
     }
 
     setLoading(false)

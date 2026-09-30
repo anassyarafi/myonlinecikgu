@@ -25,7 +25,9 @@ type ComplaintRow = {
   description: string
   status: string
   created_at: string
+  filed_by: string
   profiles: { full_name: string } | null
+  bookings: { classes: { tutor_id: string } | null } | null
 }
 
 const cardClass = 'bg-white border-2 border-[#D8D2C4] rounded-2xl p-6'
@@ -94,7 +96,7 @@ export default function AdminPage() {
 
       const { data: complaintsData } = await supabase
         .from('complaints')
-        .select('id, subject, description, status, created_at, profiles(full_name)')
+        .select('id, subject, description, status, created_at, filed_by, profiles(full_name), bookings(classes(tutor_id))')
         .order('created_at', { ascending: false })
       setComplaints((complaintsData as unknown as ComplaintRow[]) || [])
 
@@ -148,13 +150,32 @@ export default function AdminPage() {
     setSubjects((prev) => prev.filter((s) => s.id !== subjectId))
   }
 
-  const updateComplaintStatus = async (complaintId: string, status: string) => {
-    const { error } = await supabase.from('complaints').update({ status }).eq('id', complaintId)
+  const updateComplaintStatus = async (complaint: ComplaintRow, status: string) => {
+    const { error } = await supabase.from('complaints').update({ status }).eq('id', complaint.id)
     if (error) {
       setMessage(error.message)
       return
     }
-    setComplaints((prev) => prev.map((c) => (c.id === complaintId ? { ...c, status } : c)))
+    setComplaints((prev) => prev.map((c) => (c.id === complaint.id ? { ...c, status } : c)))
+
+    const statusLabel = status === 'in_review' ? 'is now being reviewed' : 'has been resolved'
+
+    await supabase.from('notifications').insert({
+      user_id: complaint.filed_by,
+      title: 'Complaint Update',
+      message: `Your complaint "${complaint.subject}" ${statusLabel} by our admin team.`,
+    })
+
+    const tutorId = complaint.bookings?.classes?.tutor_id
+    if (tutorId) {
+      await supabase.from('notifications').insert({
+        user_id: tutorId,
+        title: 'Complaint Update',
+        message: `A complaint related to one of your classes ${statusLabel}.`,
+      })
+    }
+
+    setMessage('Complaint status updated and notifications sent.')
   }
 
   if (loading) {
@@ -247,7 +268,7 @@ export default function AdminPage() {
                     <div className="flex gap-3">
                       {c.status !== 'in_review' && (
                         <button
-                          onClick={() => updateComplaintStatus(c.id, 'in_review')}
+                          onClick={() => updateComplaintStatus(c, 'in_review')}
                           className="text-xs text-[#1C3529] hover:underline"
                         >
                           Mark In Review
@@ -255,7 +276,7 @@ export default function AdminPage() {
                       )}
                       {c.status !== 'resolved' && (
                         <button
-                          onClick={() => updateComplaintStatus(c.id, 'resolved')}
+                          onClick={() => updateComplaintStatus(c, 'resolved')}
                           className="text-xs text-[#2B5D45] hover:underline"
                         >
                           Mark Resolved
