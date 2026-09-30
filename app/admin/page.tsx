@@ -18,6 +18,7 @@ type BookingRow = {
   profiles: { full_name: string } | null
   classes: { title: string; price: number } | null
 }
+type SubjectRow = { id: string; name: string; education_level: string }
 
 export default function AdminPage() {
   const router = useRouter()
@@ -26,6 +27,9 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [tutors, setTutors] = useState<TutorRow[]>([])
   const [bookings, setBookings] = useState<BookingRow[]>([])
+  const [subjects, setSubjects] = useState<SubjectRow[]>([])
+  const [newSubjectName, setNewSubjectName] = useState('')
+  const [newSubjectLevel, setNewSubjectLevel] = useState('primary')
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -60,6 +64,12 @@ export default function AdminPage() {
         .order('created_at', { ascending: false })
       setBookings((bookingsData as unknown as BookingRow[]) || [])
 
+      const { data: subjectsData } = await supabase
+        .from('subjects')
+        .select('id, name, education_level')
+        .order('name')
+      setSubjects(subjectsData || [])
+
       setLoading(false)
     }
 
@@ -67,21 +77,48 @@ export default function AdminPage() {
   }, [router])
 
   const toggleVerify = async (tutorId: string, current: boolean) => {
-  const { error } = await supabase.from('tutor_profiles').update({ verified: !current }).eq('id', tutorId)
-  if (error) {
-    setMessage(error.message)
-    return
-  }
-  setTutors((prev) => prev.map((t) => (t.id === tutorId ? { ...t, verified: !current } : t)))
+    const { error } = await supabase.from('tutor_profiles').update({ verified: !current }).eq('id', tutorId)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setTutors((prev) => prev.map((t) => (t.id === tutorId ? { ...t, verified: !current } : t)))
 
-  if (!current) {
-    await supabase.from('notifications').insert({
-      user_id: tutorId,
-      title: 'Account Verified',
-      message: 'Congratulations! Your tutor account has been verified by our admin team.',
-    })
+    if (!current) {
+      await supabase.from('notifications').insert({
+        user_id: tutorId,
+        title: 'Account Verified',
+        message: 'Congratulations! Your tutor account has been verified by our admin team.',
+      })
+    }
   }
-}
+
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim()) return
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .insert({ name: newSubjectName.trim(), education_level: newSubjectLevel })
+      .select()
+      .single()
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setSubjects((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setNewSubjectName('')
+  }
+
+  const handleDeleteSubject = async (subjectId: string) => {
+    const { error } = await supabase.from('subjects').delete().eq('id', subjectId)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setSubjects((prev) => prev.filter((s) => s.id !== subjectId))
+  }
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -131,6 +168,51 @@ export default function AdminPage() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Manage Subjects</h2>
+
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Subject name (e.g. Chemistry)"
+              value={newSubjectName}
+              onChange={(e) => setNewSubjectName(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <select
+              value={newSubjectLevel}
+              onChange={(e) => setNewSubjectLevel(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="primary">Primary</option>
+              <option value="secondary">Secondary</option>
+              <option value="university">University</option>
+            </select>
+            <button
+              onClick={handleAddSubject}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+            >
+              Add
+            </button>
+          </div>
+
+          <ul className="space-y-1">
+            {subjects.map((s) => (
+              <li key={s.id} className="flex justify-between items-center border-b border-gray-100 py-2 text-sm">
+                <span>
+                  {s.name} <span className="text-gray-400">({s.education_level})</span>
+                </span>
+                <button
+                  onClick={() => handleDeleteSubject(s.id)}
+                  className="text-red-500 hover:text-red-700 text-xs"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
