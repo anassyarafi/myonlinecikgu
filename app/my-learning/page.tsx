@@ -25,6 +25,9 @@ type ReviewRow = {
   comment: string | null
 }
 
+const cardClass = 'bg-white border-2 border-[#D8D2C4] rounded-2xl p-6'
+const inputClass = 'w-full rounded-lg border border-[#D8D2C4] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D45]'
+
 export default function MyLearningPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -191,13 +194,13 @@ export default function MyLearningPage() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center text-[#1C3529]">Loading...</div>
   }
 
   if (notStudent) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">This page is only for student accounts.</p>
+      <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center">
+        <p className="text-[#332B1F]">This page is only for student accounts.</p>
       </div>
     )
   }
@@ -207,31 +210,36 @@ export default function MyLearningPage() {
   const subjectsCovered = new Set(records.map((r) => r.classes?.subjects?.name).filter(Boolean)).size
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
+    <div className="min-h-screen bg-[#F6F3EC] px-4 py-10">
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">My Learning Record</h1>
+        <h1
+          className="text-3xl font-semibold text-[#1C3529]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          My Learning Record
+        </h1>
 
-        <div className="bg-white rounded-2xl shadow p-6 grid grid-cols-3 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4 text-center">
-            <p className="text-sm text-gray-500">Classes Booked</p>
-            <p className="text-2xl font-bold text-blue-600">{totalClasses}</p>
+        <div className={`${cardClass} grid grid-cols-3 gap-4`}>
+          <div className="bg-[#F6F3EC] rounded-lg p-4 text-center">
+            <p className="text-sm text-[#4A4437]">Classes Booked</p>
+            <p className="text-2xl font-semibold text-[#2B5D45]">{totalClasses}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <p className="text-sm text-gray-500">Classes Attended</p>
-            <p className="text-2xl font-bold text-gray-900">{attendedCount}</p>
+          <div className="bg-[#F6F3EC] rounded-lg p-4 text-center">
+            <p className="text-sm text-[#4A4437]">Classes Attended</p>
+            <p className="text-2xl font-semibold text-[#1C3529]">{attendedCount}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <p className="text-sm text-gray-500">Subjects Covered</p>
-            <p className="text-2xl font-bold text-gray-900">{subjectsCovered}</p>
+          <div className="bg-[#F6F3EC] rounded-lg p-4 text-center">
+            <p className="text-sm text-[#4A4437]">Subjects Covered</p>
+            <p className="text-2xl font-semibold text-[#1C3529]">{subjectsCovered}</p>
           </div>
         </div>
 
-        {message && <p className="text-sm text-blue-600">{message}</p>}
+        {message && <p className="text-sm text-[#2B5D45]">{message}</p>}
 
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Class History</h2>
+        <div className={cardClass}>
+          <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Class History</h2>
           {records.length === 0 ? (
-            <p className="text-gray-500">No classes booked yet.</p>
+            <p className="text-[#4A4437]">No classes booked yet.</p>
           ) : (
             <ul className="space-y-3">
               {records.map((r) => {
@@ -247,15 +255,15 @@ export default function MyLearningPage() {
                 const hasFiledComplaint = filedComplaints.has(r.id)
 
                 return (
-                  <li key={r.id} className="border border-gray-200 rounded-lg p-4">
+                  <li key={r.id} className="border border-[#D8D2C4] rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium text-gray-900">{r.classes?.title}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-medium text-[#1C3529]">{r.classes?.title}</p>
+                        <p className="text-sm text-[#4A4437]">
                           {r.classes?.subjects?.name} · Tutor:{' '}
                           {r.classes?.tutor_profiles?.profiles?.full_name ?? 'Unknown'}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-[#4A4437]">
                           {r.classes?.scheduled_at &&
                             new Date(r.classes.scheduled_at).toLocaleString()}
                         </p>
@@ -264,10 +272,10 @@ export default function MyLearningPage() {
                         <span
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             isCancelled
-                              ? 'bg-red-100 text-red-700'
+                              ? 'bg-[#F6DAD5] text-[#C6503F]'
                               : attendance?.attended
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'
+                              ? 'bg-[#DCEADF] text-[#2B5D45]'
+                              : 'bg-[#EFEAE0] text-[#4A4437]'
                           }`}
                         >
                           {isCancelled
@@ -280,7 +288,7 @@ export default function MyLearningPage() {
                     </div>
 
                     {attendance?.notes && !isCancelled && (
-                      <p className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2">
+                      <p className="text-sm text-[#4A4437] mt-2 border-t border-[#D8D2C4] pt-2">
                         Notes: {attendance.notes}
                       </p>
                     )}
@@ -288,19 +296,19 @@ export default function MyLearningPage() {
                     {hasReceipt && (
                       <Link
                         href={`/receipt/${r.id}`}
-                        className="text-blue-600 underline text-sm inline-block mt-2"
+                        className="text-[#2B5D45] underline text-sm inline-block mt-2"
                       >
                         View Receipt
                       </Link>
                     )}
 
                     {canCancel && (
-                      <div className="mt-3 border-t border-gray-100 pt-3">
+                      <div className="mt-3 border-t border-[#D8D2C4] pt-3">
                         <button
                           onClick={() =>
                             handleCancelBooking(r.id, r.payment_status === 'paid')
                           }
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                          className="text-sm text-[#C6503F] hover:opacity-80 font-medium"
                         >
                           Cancel Booking{r.payment_status === 'paid' ? ' & Request Refund' : ''}
                         </button>
@@ -308,17 +316,20 @@ export default function MyLearningPage() {
                     )}
 
                     {!isCancelled && (
-                      <div className="mt-3 border-t border-gray-100 pt-3">
+                      <div className="mt-3 border-t border-[#D8D2C4] pt-3">
                         {r.payment_status !== 'paid' ? (
-                          <p className="text-xs text-gray-400">Rating available after payment.</p>
+                          <p className="text-xs text-[#4A4437]">Rating available after payment.</p>
                         ) : existingReview ? (
                           <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              Your rating: {'★'.repeat(existingReview.rating)}
-                              {'☆'.repeat(5 - existingReview.rating)}
+                            <p className="text-sm font-medium text-[#1C3529]">
+                              Your rating:{' '}
+                              <span className="text-[#E3A73B]">
+                                {'★'.repeat(existingReview.rating)}
+                                {'☆'.repeat(5 - existingReview.rating)}
+                              </span>
                             </p>
                             {existingReview.comment && (
-                              <p className="text-sm text-gray-500 mt-1">{existingReview.comment}</p>
+                              <p className="text-sm text-[#4A4437] mt-1">{existingReview.comment}</p>
                             )}
                           </div>
                         ) : (
@@ -333,8 +344,8 @@ export default function MyLearningPage() {
                                   }
                                   className={`text-xl ${
                                     (ratingInputs[r.id] || 0) >= star
-                                      ? 'text-yellow-400'
-                                      : 'text-gray-300'
+                                      ? 'text-[#E3A73B]'
+                                      : 'text-[#D8D2C4]'
                                   }`}
                                 >
                                   ★
@@ -348,11 +359,11 @@ export default function MyLearningPage() {
                               onChange={(e) =>
                                 setCommentInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
                               }
-                              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                              className={inputClass}
                             />
                             <button
                               onClick={() => handleSubmitReview(r.id, tutorId)}
-                              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700"
+                              className="bg-[#2B5D45] text-white px-3 py-1.5 rounded-full text-sm font-medium hover:bg-[#1F4634]"
                             >
                               Submit Review
                             </button>
@@ -361,9 +372,9 @@ export default function MyLearningPage() {
                       </div>
                     )}
 
-                    <div className="mt-3 border-t border-gray-100 pt-3">
+                    <div className="mt-3 border-t border-[#D8D2C4] pt-3">
                       {hasFiledComplaint ? (
-                        <p className="text-xs text-gray-500">✓ Complaint filed for this class.</p>
+                        <p className="text-xs text-[#4A4437]">✓ Complaint filed for this class.</p>
                       ) : complaintOpenFor === r.id ? (
                         <div className="space-y-2">
                           <input
@@ -371,25 +382,25 @@ export default function MyLearningPage() {
                             placeholder="Subject (e.g. Tutor didn't show up)"
                             value={complaintSubject}
                             onChange={(e) => setComplaintSubject(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                            className={inputClass}
                           />
                           <textarea
                             placeholder="Describe the issue..."
                             value={complaintDescription}
                             onChange={(e) => setComplaintDescription(e.target.value)}
                             rows={2}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                            className={inputClass}
                           />
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             <button
                               onClick={() => handleSubmitComplaint(r.id)}
-                              className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700"
+                              className="bg-[#C6503F] text-white px-3 py-1.5 rounded-full text-sm font-medium hover:opacity-90"
                             >
                               Submit Complaint
                             </button>
                             <button
                               onClick={() => setComplaintOpenFor(null)}
-                              className="text-gray-500 text-sm hover:text-gray-700"
+                              className="text-[#4A4437] text-sm hover:text-[#1C3529]"
                             >
                               Cancel
                             </button>
@@ -398,7 +409,7 @@ export default function MyLearningPage() {
                       ) : (
                         <button
                           onClick={() => setComplaintOpenFor(r.id)}
-                          className="text-xs text-gray-500 hover:text-red-600 underline"
+                          className="text-xs text-[#4A4437] hover:text-[#C6503F] underline"
                         >
                           Report an issue
                         </button>

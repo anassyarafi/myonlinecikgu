@@ -28,8 +28,21 @@ type ComplaintRow = {
   profiles: { full_name: string } | null
 }
 
+const cardClass = 'bg-white border-2 border-[#D8D2C4] rounded-2xl p-6'
+
+type Tab = 'complaints' | 'tutors' | 'subjects' | 'refunds' | 'users'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'complaints', label: 'Complaints' },
+  { id: 'tutors', label: 'Tutor Verification' },
+  { id: 'subjects', label: 'Subjects' },
+  { id: 'refunds', label: 'Refunds' },
+  { id: 'users', label: 'Users & Bookings' },
+]
+
 export default function AdminPage() {
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<Tab>('complaints')
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [users, setUsers] = useState<UserRow[]>([])
@@ -145,13 +158,13 @@ export default function AdminPage() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center text-[#1C3529]">Loading...</div>
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Admin access only.</p>
+      <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center">
+        <p className="text-[#332B1F]">Admin access only.</p>
       </div>
     )
   }
@@ -166,192 +179,230 @@ export default function AdminPage() {
   const openComplaintsCount = complaints.filter((c) => c.status !== 'resolved').length
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+    <div className="min-h-screen bg-[#F6F3EC] px-4 py-10">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <h1
+          className="text-3xl font-semibold text-[#1C3529]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Admin Panel
+        </h1>
 
-        <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Complaints & Disputes</h2>
-            {openComplaintsCount > 0 && (
-              <span className="text-sm font-medium text-red-600">{openComplaintsCount} open</span>
-            )}
-          </div>
-          {complaints.length === 0 ? (
-            <p className="text-gray-500 text-sm">No complaints filed.</p>
-          ) : (
-            <ul className="space-y-3">
-              {complaints.map((c) => (
-                <li key={c.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="font-medium text-sm">{c.subject}</p>
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        c.status === 'resolved'
-                          ? 'bg-green-100 text-green-700'
-                          : c.status === 'in_review'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {c.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">{c.description}</p>
-                  <p className="text-xs text-gray-400 mb-2">
-                    Filed by {c.profiles?.full_name ?? 'Unknown'} ·{' '}
-                    {new Date(c.created_at).toLocaleString()}
-                  </p>
-                  <div className="flex gap-2">
-                    {c.status !== 'in_review' && (
-                      <button
-                        onClick={() => updateComplaintStatus(c.id, 'in_review')}
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        Mark In Review
-                      </button>
-                    )}
-                    {c.status !== 'resolved' && (
-                      <button
-                        onClick={() => updateComplaintStatus(c.id, 'resolved')}
-                        className="text-xs text-green-600 hover:underline"
-                      >
-                        Mark Resolved
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="flex gap-2 flex-wrap">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium border relative ${
+                activeTab === tab.id
+                  ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
+                  : 'bg-white text-[#1C3529] border-[#D8D2C4]'
+              }`}
+            >
+              {tab.label}
+              {tab.id === 'complaints' && openComplaintsCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center bg-[#C6503F] text-white text-xs rounded-full w-4 h-4">
+                  {openComplaintsCount}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Tutor Verification</h2>
-          {tutors.length === 0 ? (
-            <p className="text-gray-500">No tutors yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {tutors.map((t) => (
-                <li key={t.id} className="flex justify-between items-center border border-gray-200 rounded-lg p-3">
-                  <div>
-                    <p className="font-medium">{t.profiles?.full_name}</p>
-                    <p className="text-sm text-gray-500">{t.qualification}</p>
-                  </div>
+        {message && <p className="text-sm text-[#C6503F]">{message}</p>}
+
+        {activeTab === 'complaints' && (
+          <div className={cardClass}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#1C3529]">Complaints & Disputes</h2>
+              {openComplaintsCount > 0 && (
+                <span className="text-sm font-medium text-[#C6503F]">{openComplaintsCount} open</span>
+              )}
+            </div>
+            {complaints.length === 0 ? (
+              <p className="text-[#4A4437] text-sm">No complaints filed.</p>
+            ) : (
+              <ul className="space-y-3">
+                {complaints.map((c) => (
+                  <li key={c.id} className="border border-[#D8D2C4] rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="font-medium text-sm text-[#1C3529]">{c.subject}</p>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          c.status === 'resolved'
+                            ? 'bg-[#DCEADF] text-[#2B5D45]'
+                            : c.status === 'in_review'
+                            ? 'bg-[#FCEFD2] text-[#8A6111]'
+                            : 'bg-[#F6DAD5] text-[#C6503F]'
+                        }`}
+                      >
+                        {c.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#4A4437] mb-1">{c.description}</p>
+                    <p className="text-xs text-[#4A4437] mb-2">
+                      Filed by {c.profiles?.full_name ?? 'Unknown'} ·{' '}
+                      {new Date(c.created_at).toLocaleString()}
+                    </p>
+                    <div className="flex gap-3">
+                      {c.status !== 'in_review' && (
+                        <button
+                          onClick={() => updateComplaintStatus(c.id, 'in_review')}
+                          className="text-xs text-[#1C3529] hover:underline"
+                        >
+                          Mark In Review
+                        </button>
+                      )}
+                      {c.status !== 'resolved' && (
+                        <button
+                          onClick={() => updateComplaintStatus(c.id, 'resolved')}
+                          className="text-xs text-[#2B5D45] hover:underline"
+                        >
+                          Mark Resolved
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'tutors' && (
+          <div className={cardClass}>
+            <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Tutor Verification</h2>
+            {tutors.length === 0 ? (
+              <p className="text-[#4A4437]">No tutors yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {tutors.map((t) => (
+                  <li key={t.id} className="flex justify-between items-center border border-[#D8D2C4] rounded-lg p-3">
+                    <div>
+                      <p className="font-medium text-[#1C3529]">{t.profiles?.full_name}</p>
+                      <p className="text-sm text-[#4A4437]">{t.qualification}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleVerify(t.id, t.verified)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        t.verified ? 'bg-[#DCEADF] text-[#2B5D45]' : 'bg-[#EFEAE0] text-[#4A4437]'
+                      }`}
+                    >
+                      {t.verified ? 'Verified ✓' : 'Verify'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'subjects' && (
+          <div className={cardClass}>
+            <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Manage Subjects</h2>
+
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Subject name (e.g. Chemistry)"
+                value={newSubjectName}
+                onChange={(e) => setNewSubjectName(e.target.value)}
+                className="flex-1 rounded-lg border border-[#D8D2C4] px-3 py-2 text-sm"
+              />
+              <select
+                value={newSubjectLevel}
+                onChange={(e) => setNewSubjectLevel(e.target.value)}
+                className="rounded-lg border border-[#D8D2C4] px-3 py-2 text-sm"
+              >
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="university">University</option>
+              </select>
+              <button
+                onClick={handleAddSubject}
+                className="bg-[#2B5D45] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#1F4634]"
+              >
+                Add
+              </button>
+            </div>
+
+            <ul className="space-y-1">
+              {subjects.map((s) => (
+                <li key={s.id} className="flex justify-between items-center border-b border-[#EFEAE0] py-2 text-sm">
+                  <span className="text-[#1C3529]">
+                    {s.name} <span className="text-[#4A4437]">({s.education_level})</span>
+                  </span>
                   <button
-                    onClick={() => toggleVerify(t.id, t.verified)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                      t.verified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                    }`}
+                    onClick={() => handleDeleteSubject(s.id)}
+                    className="text-[#C6503F] hover:opacity-80 text-xs"
                   >
-                    {t.verified ? 'Verified ✓' : 'Verify'}
+                    Remove
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Manage Subjects</h2>
-
-          <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              placeholder="Subject name (e.g. Chemistry)"
-              value={newSubjectName}
-              onChange={(e) => setNewSubjectName(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-            <select
-              value={newSubjectLevel}
-              onChange={(e) => setNewSubjectLevel(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="primary">Primary</option>
-              <option value="secondary">Secondary</option>
-              <option value="university">University</option>
-            </select>
-            <button
-              onClick={handleAddSubject}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-            >
-              Add
-            </button>
           </div>
+        )}
 
-          <ul className="space-y-1">
-            {subjects.map((s) => (
-              <li key={s.id} className="flex justify-between items-center border-b border-gray-100 py-2 text-sm">
-                <span>
-                  {s.name} <span className="text-gray-400">({s.education_level})</span>
-                </span>
-                <button
-                  onClick={() => handleDeleteSubject(s.id)}
-                  className="text-red-500 hover:text-red-700 text-xs"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Refunds & Cancellations</h2>
-            <span className="text-sm font-medium text-red-600">
-              Total refunded: RM{totalRefunded.toFixed(2)}
-            </span>
+        {activeTab === 'refunds' && (
+          <div className={cardClass}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#1C3529]">Refunds & Cancellations</h2>
+              <span className="text-sm font-medium text-[#C6503F]">
+                Total refunded: RM{totalRefunded.toFixed(2)}
+              </span>
+            </div>
+            {refunds.length === 0 ? (
+              <p className="text-[#4A4437] text-sm">No cancellations or refunds yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {refunds.map((b) => (
+                  <li key={b.id} className="border border-[#D8D2C4] rounded-lg p-3 text-sm">
+                    <p className="font-medium text-[#1C3529]">{b.classes?.title}</p>
+                    <p className="text-[#4A4437]">
+                      {b.profiles?.full_name} · RM{b.classes?.price} ·{' '}
+                      <span className={b.payment_status === 'refunded' ? 'text-[#C6503F] font-medium' : ''}>
+                        {b.payment_status === 'refunded' ? 'Refunded' : b.payment_status}
+                      </span>
+                      {' · '}
+                      {b.booking_status}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          {refunds.length === 0 ? (
-            <p className="text-gray-500 text-sm">No cancellations or refunds yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {refunds.map((b) => (
-                <li key={b.id} className="border border-gray-200 rounded-lg p-3 text-sm">
-                  <p className="font-medium">{b.classes?.title}</p>
-                  <p className="text-gray-500">
-                    {b.profiles?.full_name} · RM{b.classes?.price} ·{' '}
-                    <span className={b.payment_status === 'refunded' ? 'text-red-600 font-medium' : ''}>
-                      {b.payment_status === 'refunded' ? 'Refunded' : b.payment_status}
-                    </span>
-                    {' · '}
-                    {b.booking_status}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        )}
 
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">All Users ({users.length})</h2>
-          <ul className="space-y-1 text-sm">
-            {users.map((u) => (
-              <li key={u.id} className="flex justify-between border-b border-gray-100 py-2">
-                <span>{u.full_name}</span>
-                <span className="text-gray-500 capitalize">{u.role}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            <div className={cardClass}>
+              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">All Users ({users.length})</h2>
+              <ul className="space-y-1 text-sm">
+                {users.map((u) => (
+                  <li key={u.id} className="flex justify-between border-b border-[#EFEAE0] py-2">
+                    <span className="text-[#1C3529]">{u.full_name}</span>
+                    <span className="text-[#4A4437] capitalize">{u.role}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-        <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">All Bookings ({bookings.length})</h2>
-          <ul className="space-y-2">
-            {bookings.map((b) => (
-              <li key={b.id} className="border border-gray-200 rounded-lg p-3 text-sm">
-                <p className="font-medium">{b.classes?.title}</p>
-                <p className="text-gray-500">
-                  {b.profiles?.full_name} · {b.payment_status} · {b.booking_status}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {message && <p className="text-sm text-red-600">{message}</p>}
+            <div className={cardClass}>
+              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">All Bookings ({bookings.length})</h2>
+              <ul className="space-y-2">
+                {bookings.map((b) => (
+                  <li key={b.id} className="border border-[#D8D2C4] rounded-lg p-3 text-sm">
+                    <p className="font-medium text-[#1C3529]">{b.classes?.title}</p>
+                    <p className="text-[#4A4437]">
+                      {b.profiles?.full_name} · {b.payment_status} · {b.booking_status}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
