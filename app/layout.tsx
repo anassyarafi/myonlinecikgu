@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Lexend, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
@@ -17,6 +17,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "MyOnlineCikgu",
   description: "Find. Book. Learn. Improve.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MyOnlineCikgu",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2B5D45",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
