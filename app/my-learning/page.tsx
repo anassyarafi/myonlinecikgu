@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type LearningRecord = {
@@ -91,13 +92,13 @@ export default function MyLearningPage() {
 
   const handleCancelBooking = async (bookingId: string, wasPaid: boolean) => {
     const cancelledRecord = records.find((r) => r.id === bookingId)
-if (cancelledRecord?.classes?.tutor_profiles?.id) {
-  await supabase.from('notifications').insert({
-    user_id: cancelledRecord.classes.tutor_profiles.id,
-    title: 'Booking Cancelled',
-    message: `A student cancelled their booking for "${cancelledRecord.classes.title}".${wasPaid ? ' Refund processed.' : ''}`,
-  })
-}
+    if (cancelledRecord?.classes?.tutor_profiles?.id) {
+      await supabase.from('notifications').insert({
+        user_id: cancelledRecord.classes.tutor_profiles.id,
+        title: 'Booking Cancelled',
+        message: `A student cancelled their booking for "${cancelledRecord.classes.title}".${wasPaid ? ' Refund processed.' : ''}`,
+      })
+    }
     setMessage('')
 
     const { error } = await supabase
@@ -205,6 +206,7 @@ if (cancelledRecord?.classes?.tutor_profiles?.id) {
                   ? new Date(r.classes.scheduled_at) > new Date()
                   : false
                 const canCancel = isUpcoming && !isCancelled
+                const hasReceipt = r.payment_status === 'paid' || r.payment_status === 'refunded'
 
                 return (
                   <li key={r.id} className="border border-gray-200 rounded-lg p-4">
@@ -243,6 +245,15 @@ if (cancelledRecord?.classes?.tutor_profiles?.id) {
                       <p className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2">
                         Notes: {attendance.notes}
                       </p>
+                    )}
+
+                    {hasReceipt && (
+                      <Link
+                        href={`/receipt/${r.id}`}
+                        className="text-blue-600 underline text-sm inline-block mt-2"
+                      >
+                        View Receipt
+                      </Link>
                     )}
 
                     {canCancel && (

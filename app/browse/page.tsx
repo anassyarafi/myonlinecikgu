@@ -282,13 +282,19 @@ export default function BrowsePage() {
                       )}
 
                       {booking?.state === 'paid' && (
-                        <div className="mt-2">
+                        <div className="mt-2 space-y-1">
                           <p className="text-green-600 font-medium text-sm">✓ Booked & Paid</p>
                           <Link
                             href={`/classroom/${booking.id}`}
-                            className="text-blue-600 underline text-sm"
+                            className="text-blue-600 underline text-sm block"
                           >
                             Enter Classroom
+                          </Link>
+                          <Link
+                            href={`/receipt/${booking.id}`}
+                            className="text-blue-600 underline text-sm block"
+                          >
+                            View Receipt
                           </Link>
                         </div>
                       )}
