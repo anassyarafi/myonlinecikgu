@@ -57,7 +57,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5 text-sm flex-wrap justify-end">
-          {loggedIn && (
+          {role === 'student' && (
             <Link href="/browse" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
               Browse Tutors
             </Link>
@@ -66,12 +66,6 @@ export default function Navbar() {
           {role === 'tutor' && (
             <Link href="/tutor-dashboard" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
               Tutor Dashboard
-            </Link>
-          )}
-
-          {role === 'student' && (
-            <Link href="/my-learning" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
-              My Learning
             </Link>
           )}
 
