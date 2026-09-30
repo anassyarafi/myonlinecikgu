@@ -36,6 +36,11 @@ export default function MyLearningPage() {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
 
+  const [complaintOpenFor, setComplaintOpenFor] = useState<string | null>(null)
+  const [complaintSubject, setComplaintSubject] = useState('')
+  const [complaintDescription, setComplaintDescription] = useState('')
+  const [filedComplaints, setFiledComplaints] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -88,6 +93,13 @@ export default function MyLearningPage() {
       reviewMap[r.booking_id] = r
     })
     setReviews(reviewMap)
+
+    const { data: complaintsData } = await supabase
+      .from('complaints')
+      .select('booking_id')
+      .eq('filed_by', uid)
+
+    setFiledComplaints(new Set((complaintsData || []).map((c) => c.booking_id).filter(Boolean)))
   }
 
   const handleCancelBooking = async (bookingId: string, wasPaid: boolean) => {
@@ -153,6 +165,31 @@ export default function MyLearningPage() {
     setMessage('Review submitted!')
   }
 
+  const handleSubmitComplaint = async (bookingId: string) => {
+    if (!userId || !complaintSubject.trim() || !complaintDescription.trim()) {
+      setMessage('Please fill in both the subject and description.')
+      return
+    }
+
+    const { error } = await supabase.from('complaints').insert({
+      filed_by: userId,
+      booking_id: bookingId,
+      subject: complaintSubject.trim(),
+      description: complaintDescription.trim(),
+    })
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setFiledComplaints((prev) => new Set(prev).add(bookingId))
+    setComplaintOpenFor(null)
+    setComplaintSubject('')
+    setComplaintDescription('')
+    setMessage('Complaint filed. Our admin team will review it.')
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -207,6 +244,7 @@ export default function MyLearningPage() {
                   : false
                 const canCancel = isUpcoming && !isCancelled
                 const hasReceipt = r.payment_status === 'paid' || r.payment_status === 'refunded'
+                const hasFiledComplaint = filedComplaints.has(r.id)
 
                 return (
                   <li key={r.id} className="border border-gray-200 rounded-lg p-4">
@@ -322,6 +360,50 @@ export default function MyLearningPage() {
                         )}
                       </div>
                     )}
+
+                    <div className="mt-3 border-t border-gray-100 pt-3">
+                      {hasFiledComplaint ? (
+                        <p className="text-xs text-gray-500">✓ Complaint filed for this class.</p>
+                      ) : complaintOpenFor === r.id ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Subject (e.g. Tutor didn't show up)"
+                            value={complaintSubject}
+                            onChange={(e) => setComplaintSubject(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                          />
+                          <textarea
+                            placeholder="Describe the issue..."
+                            value={complaintDescription}
+                            onChange={(e) => setComplaintDescription(e.target.value)}
+                            rows={2}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSubmitComplaint(r.id)}
+                              className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700"
+                            >
+                              Submit Complaint
+                            </button>
+                            <button
+                              onClick={() => setComplaintOpenFor(null)}
+                              className="text-gray-500 text-sm hover:text-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setComplaintOpenFor(r.id)}
+                          className="text-xs text-gray-500 hover:text-red-600 underline"
+                        >
+                          Report an issue
+                        </button>
+                      )}
+                    </div>
                   </li>
                 )
               })}

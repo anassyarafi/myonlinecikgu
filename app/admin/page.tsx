@@ -19,6 +19,14 @@ type BookingRow = {
   classes: { title: string; price: number } | null
 }
 type SubjectRow = { id: string; name: string; education_level: string }
+type ComplaintRow = {
+  id: string
+  subject: string
+  description: string
+  status: string
+  created_at: string
+  profiles: { full_name: string } | null
+}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -30,6 +38,7 @@ export default function AdminPage() {
   const [subjects, setSubjects] = useState<SubjectRow[]>([])
   const [newSubjectName, setNewSubjectName] = useState('')
   const [newSubjectLevel, setNewSubjectLevel] = useState('primary')
+  const [complaints, setComplaints] = useState<ComplaintRow[]>([])
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -69,6 +78,12 @@ export default function AdminPage() {
         .select('id, name, education_level')
         .order('name')
       setSubjects(subjectsData || [])
+
+      const { data: complaintsData } = await supabase
+        .from('complaints')
+        .select('id, subject, description, status, created_at, profiles(full_name)')
+        .order('created_at', { ascending: false })
+      setComplaints((complaintsData as unknown as ComplaintRow[]) || [])
 
       setLoading(false)
     }
@@ -120,6 +135,15 @@ export default function AdminPage() {
     setSubjects((prev) => prev.filter((s) => s.id !== subjectId))
   }
 
+  const updateComplaintStatus = async (complaintId: string, status: string) => {
+    const { error } = await supabase.from('complaints').update({ status }).eq('id', complaintId)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setComplaints((prev) => prev.map((c) => (c.id === complaintId ? { ...c, status } : c)))
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -139,10 +163,68 @@ export default function AdminPage() {
     .filter((b) => b.payment_status === 'refunded')
     .reduce((sum, b) => sum + (b.classes?.price || 0), 0)
 
+  const openComplaintsCount = complaints.filter((c) => c.status !== 'resolved').length
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-3xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+
+        <div className="bg-white rounded-2xl shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Complaints & Disputes</h2>
+            {openComplaintsCount > 0 && (
+              <span className="text-sm font-medium text-red-600">{openComplaintsCount} open</span>
+            )}
+          </div>
+          {complaints.length === 0 ? (
+            <p className="text-gray-500 text-sm">No complaints filed.</p>
+          ) : (
+            <ul className="space-y-3">
+              {complaints.map((c) => (
+                <li key={c.id} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-sm">{c.subject}</p>
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        c.status === 'resolved'
+                          ? 'bg-green-100 text-green-700'
+                          : c.status === 'in_review'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {c.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">{c.description}</p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Filed by {c.profiles?.full_name ?? 'Unknown'} ·{' '}
+                    {new Date(c.created_at).toLocaleString()}
+                  </p>
+                  <div className="flex gap-2">
+                    {c.status !== 'in_review' && (
+                      <button
+                        onClick={() => updateComplaintStatus(c.id, 'in_review')}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Mark In Review
+                      </button>
+                    )}
+                    {c.status !== 'resolved' && (
+                      <button
+                        onClick={() => updateComplaintStatus(c.id, 'resolved')}
+                        className="text-xs text-green-600 hover:underline"
+                      >
+                        Mark Resolved
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Tutor Verification</h2>
