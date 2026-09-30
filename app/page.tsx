@@ -10,16 +10,16 @@ export default function HomePage() {
         >
           Learning starts with the right tutor.
         </h1>
-        <p className="text-lg text-[#4A4437] max-w-xl mb-8">
+        <p className="text-lg text-[#332B1F] max-w-xl mb-8">
           Book verified tutors for Primary, Secondary and University subjects across
           Malaysia — search, schedule, pay and attend class, all in one place.
         </p>
         <div className="flex gap-3">
           <Link
-            href="/browse"
+            href="/signup"
             className="bg-[#2B5D45] text-white px-6 py-3 rounded-full font-medium hover:bg-[#1F4634]"
           >
-            Browse tutors
+            Ready to learn
           </Link>
           <Link
             href="/signup"
@@ -47,7 +47,7 @@ export default function HomePage() {
                   {step.n}
                 </span>
                 <p className="font-semibold text-[#1C3529] mt-2 mb-1">{step.label}</p>
-                <p className="text-sm text-[#4A4437]">{step.text}</p>
+                <p className="text-sm text-[#332B1F]">{step.text}</p>
               </li>
             ))}
           </ol>
