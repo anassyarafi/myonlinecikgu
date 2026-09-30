@@ -23,7 +23,14 @@ type PayoutRow = {
   requested_at: string
 }
 
+type AvailabilityDay = {
+  enabled: boolean
+  start: string
+  end: string
+}
+
 const PLATFORM_COMMISSION_RATE = 0.15
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function TutorDashboard() {
   const router = useRouter()
@@ -44,6 +51,15 @@ export default function TutorDashboard() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
+
+  const [availability, setAvailability] = useState<Record<number, AvailabilityDay>>(() => {
+    const initial: Record<number, AvailabilityDay> = {}
+    for (let i = 0; i < 7; i++) {
+      initial[i] = { enabled: false, start: '09:00', end: '17:00' }
+    }
+    return initial
+  })
+  const [availabilityMessage, setAvailabilityMessage] = useState('')
 
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
@@ -106,6 +122,21 @@ export default function TutorDashboard() {
         if (tutorProfile.verification_document_url) {
           setVerificationDocPath(tutorProfile.verification_document_url)
         }
+      }
+
+      const { data: availabilityData } = await supabase
+        .from('tutor_availability')
+        .select('day_of_week, start_time, end_time')
+        .eq('tutor_id', user.id)
+
+      if (availabilityData && availabilityData.length > 0) {
+        setAvailability((prev) => {
+          const updated = { ...prev }
+          availabilityData.forEach((a) => {
+            updated[a.day_of_week] = { enabled: true, start: a.start_time, end: a.end_time }
+          })
+          return updated
+        })
       }
 
       const { data: subjectsData } = await supabase.from('subjects').select('*').order('name')
@@ -224,6 +255,57 @@ export default function TutorDashboard() {
       setProfileSaved(true)
       setMessage(wasAlreadySaved ? 'Profile updated!' : 'Profile saved!')
     }
+  }
+
+  const toggleDay = (day: number) => {
+    setAvailability((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], enabled: !prev[day].enabled },
+    }))
+  }
+
+  const updateDayTime = (day: number, field: 'start' | 'end', value: string) => {
+    setAvailability((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value },
+    }))
+  }
+
+  const handleSaveAvailability = async () => {
+    if (!userId) return
+    setAvailabilityMessage('')
+
+    const enabledDays = Object.entries(availability).filter(([, v]) => v.enabled)
+    const disabledDays = Object.entries(availability).filter(([, v]) => !v.enabled)
+
+    if (enabledDays.length > 0) {
+      const rows = enabledDays.map(([day, v]) => ({
+        tutor_id: userId,
+        day_of_week: Number(day),
+        start_time: v.start,
+        end_time: v.end,
+      }))
+
+      const { error } = await supabase
+        .from('tutor_availability')
+        .upsert(rows, { onConflict: 'tutor_id,day_of_week' })
+
+      if (error) {
+        setAvailabilityMessage(error.message)
+        return
+      }
+    }
+
+    if (disabledDays.length > 0) {
+      const dayNumbers = disabledDays.map(([day]) => Number(day))
+      await supabase
+        .from('tutor_availability')
+        .delete()
+        .eq('tutor_id', userId)
+        .in('day_of_week', dayNumbers)
+    }
+
+    setAvailabilityMessage('Availability saved!')
   }
 
   const handleCreateClass = async (e: React.FormEvent) => {
@@ -394,6 +476,51 @@ export default function TutorDashboard() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Weekly Availability</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Toggle the days you're generally available and set your hours. This helps students know when to expect you're free.
+          </p>
+          <div className="space-y-3">
+            {DAY_NAMES.map((name, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <label className="flex items-center gap-2 w-28">
+                  <input
+                    type="checkbox"
+                    checked={availability[index].enabled}
+                    onChange={() => toggleDay(index)}
+                  />
+                  <span className="text-sm text-gray-700">{name}</span>
+                </label>
+                {availability[index].enabled && (
+                  <>
+                    <input
+                      type="time"
+                      value={availability[index].start}
+                      onChange={(e) => updateDayTime(index, 'start', e.target.value)}
+                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                    />
+                    <span className="text-gray-400 text-sm">to</span>
+                    <input
+                      type="time"
+                      value={availability[index].end}
+                      onChange={(e) => updateDayTime(index, 'end', e.target.value)}
+                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                    />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={handleSaveAvailability}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+          >
+            Save Availability
+          </button>
+          {availabilityMessage && <p className="text-sm text-gray-600 mt-3">{availabilityMessage}</p>}
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
