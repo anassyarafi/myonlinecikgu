@@ -46,28 +46,37 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-[#FFFFFF] border-b-2 border-[#D8D2C4] px-4 py-3">
-      <div className="max-w-5xl mx-auto flex items-center justify-between">
-        <Link href="/" className="font-semibold text-lg text-[#2B5D45]" style={{ fontFamily: 'var(--font-display)' }}>
+    <nav className="bg-white border-b-2 border-[#D8D2C4] px-4 py-3">
+      <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-y-2 gap-x-3">
+        <Link
+          href="/"
+          className="font-semibold text-lg text-[#2B5D45] whitespace-nowrap"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           MyOnlineCikgu
         </Link>
 
-        <div className="flex items-center gap-5 text-sm">
-          {role === 'student' && (
-            <Link href="/browse" className="text-[#1C3529] hover:text-[#2B5D45]">
+        <div className="flex items-center gap-3 sm:gap-5 text-sm flex-wrap justify-end">
+          {loggedIn && (
+            <Link href="/browse" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
               Browse Tutors
             </Link>
           )}
 
+          {role === 'tutor' && (
+            <Link href="/tutor-dashboard" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
+              Tutor Dashboard
+            </Link>
+          )}
 
           {role === 'student' && (
-            <Link href="/my-learning" className="text-[#1C3529] hover:text-[#2B5D45]">
+            <Link href="/my-learning" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
               My Learning
             </Link>
           )}
 
           {role === 'admin' && (
-            <Link href="/admin" className="text-[#1C3529] hover:text-[#2B5D45]">
+            <Link href="/admin" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
               Admin
             </Link>
           )}
@@ -77,18 +86,18 @@ export default function Navbar() {
           {loggedIn ? (
             <button
               onClick={handleLogout}
-              className="border border-[#D8D2C4] text-[#1C3529] px-4 py-1.5 rounded-full font-medium hover:bg-[#F6F3EC]"
+              className="border border-[#D8D2C4] text-[#1C3529] px-3 py-1.5 rounded-full font-medium hover:bg-[#F6F3EC] whitespace-nowrap"
             >
               Log out
             </button>
           ) : (
             <>
-              <Link href="/login" className="text-[#1C3529] hover:text-[#2B5D45]">
+              <Link href="/login" className="text-[#1C3529] hover:text-[#2B5D45] whitespace-nowrap">
                 Log In
               </Link>
               <Link
                 href="/signup"
-                className="bg-[#2B5D45] text-white px-4 py-1.5 rounded-full font-medium hover:bg-[#1F4634]"
+                className="bg-[#2B5D45] text-white px-3 py-1.5 rounded-full font-medium hover:bg-[#1F4634] whitespace-nowrap"
               >
                 Sign Up
               </Link>

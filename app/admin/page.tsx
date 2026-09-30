@@ -322,7 +322,7 @@ export default function AdminPage() {
           <div className={cardClass}>
             <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Manage Subjects</h2>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
                 type="text"
                 placeholder="Subject name (e.g. Chemistry)"
@@ -333,7 +333,7 @@ export default function AdminPage() {
               <select
                 value={newSubjectLevel}
                 onChange={(e) => setNewSubjectLevel(e.target.value)}
-                className="rounded-lg border border-[#D8D2C4] px-3 py-2 text-sm"
+                className="w-full sm:w-auto rounded-lg border border-[#D8D2C4] px-3 py-2 text-sm"
               >
                 <option value="primary">Primary</option>
                 <option value="secondary">Secondary</option>
@@ -341,7 +341,7 @@ export default function AdminPage() {
               </select>
               <button
                 onClick={handleAddSubject}
-                className="bg-[#2B5D45] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#1F4634]"
+                className="w-full sm:w-auto bg-[#2B5D45] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#1F4634]"
               >
                 Add
               </button>
@@ -367,7 +367,7 @@ export default function AdminPage() {
 
         {activeTab === 'refunds' && (
           <div className={cardClass}>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-4">
               <h2 className="text-xl font-semibold text-[#1C3529]">Refunds & Cancellations</h2>
               <span className="text-sm font-medium text-[#C6503F]">
                 Total refunded: RM{totalRefunded.toFixed(2)}
