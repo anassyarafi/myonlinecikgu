@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Subject = { id: string; name: string; education_level: string }
@@ -78,6 +79,7 @@ export default function TutorDashboard() {
   const [payouts, setPayouts] = useState<PayoutRow[]>([])
 
   const [message, setMessage] = useState('')
+  const [notifiedBookings, setNotifiedBookings] = useState<Set<string>>(new Set())
 
   const refreshPhotoUrl = async (path: string) => {
     const { data } = await supabase.storage.from('tutor-uploads').createSignedUrl(path, 3600)
@@ -358,6 +360,15 @@ export default function TutorDashboard() {
 
     setPayouts([data, ...payouts])
     setMessage('Payout requested!')
+  }
+
+  const handleNotifyStudent = async (bookingId: string, studentId: string, classTitle: string) => {
+    await supabase.from('notifications').insert({
+      user_id: studentId,
+      title: 'Class Reminder',
+      message: `Your tutor sent a reminder for "${classTitle}". Go to My Learning to view your class and join when it starts.`,
+    })
+    setNotifiedBookings((prev) => new Set(prev).add(bookingId))
   }
 
   if (loading) {
@@ -662,6 +673,26 @@ export default function TutorDashboard() {
                         <p className="text-[#4A4437]">
                           Student: {b.profiles?.full_name ?? 'Unknown'} · {b.payment_status} · {b.booking_status}
                         </p>
+                        {b.payment_status === 'paid' && b.booking_status !== 'cancelled' && (
+                          <div className="flex items-center gap-4 mt-2">
+                            <Link
+                              href={`/classroom/${b.id}`}
+                              className="text-[#2B5D45] underline text-xs font-medium"
+                            >
+                              Enter Classroom
+                            </Link>
+                            {notifiedBookings.has(b.id) ? (
+                              <span className="text-[#2B5D45] text-xs font-medium">✓ Notified successfully</span>
+                            ) : (
+                              <button
+                                onClick={() => handleNotifyStudent(b.id, b.student_id, b.classes?.title ?? 'your class')}
+                                className="text-[#1C3529] underline text-xs font-medium"
+                              >
+                                Notify Student
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
