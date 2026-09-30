@@ -1,21 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null)
-
-  const roleLabel = (role: string) => {
-    if (role === 'student') return 'Student / Parent'
-    if (role === 'tutor') return 'Tutor'
-    if (role === 'admin') return 'Admin'
-    return role
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,51 +28,25 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('role')
         .eq('id', data.user.id)
         .single()
 
-      if (profileError) {
-        setError(profileError.message)
-        setLoading(false)
-        return
-      }
+      setLoading(false)
 
-      setProfile(profileData)
+      if (profile?.role === 'tutor') {
+        router.push('/tutor-dashboard')
+      } else if (profile?.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/browse')
+      }
+      return
     }
 
     setLoading(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setProfile(null)
-    setEmail('')
-    setPassword('')
-  }
-
-  if (profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F6F3EC] px-4">
-        <div className="w-full max-w-md bg-white border-2 border-[#D8D2C4] rounded-2xl p-8 text-center">
-          <h1
-            className="text-2xl font-semibold text-[#1C3529] mb-2"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            Welcome back, {profile.full_name}!
-          </h1>
-          <p className="text-[#4A4437] mb-6">Logged in as: {roleLabel(profile.role)}</p>
-          <button
-            onClick={handleLogout}
-            className="border border-[#D8D2C4] text-[#1C3529] px-5 py-2 rounded-full font-medium hover:bg-[#F6F3EC]"
-          >
-            Log out
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (

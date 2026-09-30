@@ -36,6 +36,7 @@ export default function BrowsePage() {
   const [levelFilter, setLevelFilter] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [role, setRole] = useState<string | null>(null)
+  const [fullName, setFullName] = useState('')
   const [bookings, setBookings] = useState<Record<string, { id: string; state: BookingState }>>({})
   const [message, setMessage] = useState('')
   const [subjectFilter, setSubjectFilter] = useState('')
@@ -50,10 +51,11 @@ export default function BrowsePage() {
         setUserId(user.id)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('full_name, role')
           .eq('id', user.id)
           .single()
         setRole(profile?.role ?? null)
+        setFullName(profile?.full_name ?? '')
       }
 
       const { data, error } = await supabase
@@ -178,7 +180,7 @@ export default function BrowsePage() {
             className="text-3xl font-semibold text-[#1C3529]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            Find a Tutor
+            {fullName ? `Welcome, ${fullName}` : 'Find a Tutor'}
           </h1>
           <p className="text-[#4A4437]">Browse available classes</p>
         </div>
