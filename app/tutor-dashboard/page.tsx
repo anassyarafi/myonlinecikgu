@@ -30,13 +30,67 @@ type AvailabilityDay = {
   end: string
 }
 
+type Notice = { type: 'success' | 'error'; text: string }
+
 const PLATFORM_COMMISSION_RATE = 0.15
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-const cardClass = 'bg-white border-2 border-[#D8D2C4] rounded-2xl p-6'
-const inputClass = 'w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]'
-const labelClass = 'block text-sm font-medium text-[#1C3529] mb-1'
-const primaryButtonClass = 'bg-[#2B5D45] text-white px-4 py-2 rounded-full font-medium hover:bg-[#1F4634] disabled:opacity-50'
+const fieldClass =
+  'w-full h-12 px-3.5 rounded-[10px] border border-[#C5CDD6] bg-white text-base text-[#0F1B2D] outline-none focus:border-[#0A7B83] focus:ring-4 focus:ring-[#E1F1F2]'
+const labelClass = 'block text-[13px] font-semibold text-[#0F1B2D] mb-1.5'
+const primaryButton =
+  'h-12 px-5 rounded-[10px] bg-[#0A7B83] text-white text-sm font-bold hover:bg-[#075A61] disabled:opacity-50 disabled:cursor-not-allowed'
+const secondaryButton =
+  'h-11 px-4 rounded-[10px] border border-[#0A7B83] bg-white text-[#075A61] text-sm font-bold hover:bg-[#E1F1F2] inline-flex items-center justify-center'
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleString('en-MY', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+const initialsOf = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('')
+
+function Panel({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="bg-white border border-[#DDE2E8] rounded-[14px] p-4 sm:p-5">
+      <h2 className="text-base font-bold text-[#0F1B2D]">{title}</h2>
+      {description && <p className="text-sm text-[#566274] mt-1">{description}</p>}
+      <div className="mt-4">{children}</div>
+    </section>
+  )
+}
+
+function Chip({ tone, children }: { tone: 'good' | 'wait' | 'bad' | 'neutral'; children: React.ReactNode }) {
+  const styles = {
+    good: 'bg-[#E1F1F2] text-[#075A61]',
+    wait: 'bg-[#FCEFD2] text-[#8A6111]',
+    bad: 'bg-[#F6DAD5] text-[#A23E2A]',
+    neutral: 'bg-[#EBEEF2] text-[#566274]',
+  }[tone]
+  return (
+    <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-bold capitalize ${styles}`}>
+      {children}
+    </span>
+  )
+}
 
 export default function TutorDashboard() {
   const router = useRouter()
@@ -45,19 +99,19 @@ export default function TutorDashboard() {
   const [userId, setUserId] = useState<string | null>(null)
   const [fullName, setFullName] = useState('')
   const [notTutor, setNotTutor] = useState(false)
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   const [bio, setBio] = useState('')
   const [qualification, setQualification] = useState('')
   const [hourlyRate, setHourlyRate] = useState('')
   const [tutorType, setTutorType] = useState('')
+  const [verified, setVerified] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
 
-  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null)
   const [profilePhotoSignedUrl, setProfilePhotoSignedUrl] = useState<string | null>(null)
   const [verificationDocPath, setVerificationDocPath] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(false)
-  const [uploadMessage, setUploadMessage] = useState('')
 
   const [availability, setAvailability] = useState<Record<number, AvailabilityDay>>(() => {
     const initial: Record<number, AvailabilityDay> = {}
@@ -66,7 +120,6 @@ export default function TutorDashboard() {
     }
     return initial
   })
-  const [availabilityMessage, setAvailabilityMessage] = useState('')
 
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
@@ -77,9 +130,15 @@ export default function TutorDashboard() {
 
   const [bookings, setBookings] = useState<BookingRow[]>([])
   const [payouts, setPayouts] = useState<PayoutRow[]>([])
+  const [notified, setNotified] = useState<Record<string, boolean>>({})
 
-  const [message, setMessage] = useState('')
-  const [notifiedBookings, setNotifiedBookings] = useState<Set<string>>(new Set())
+  const showNotice = (type: Notice['type'], text: string) => setNotice({ type, text })
+
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 4000)
+    return () => clearTimeout(t)
+  }, [notice])
 
   const refreshPhotoUrl = async (path: string) => {
     const { data } = await supabase.storage.from('tutor-uploads').createSignedUrl(path, 3600)
@@ -88,7 +147,9 @@ export default function TutorDashboard() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
       if (!user) {
         router.push('/login')
@@ -112,7 +173,7 @@ export default function TutorDashboard() {
 
       const { data: tutorProfile } = await supabase
         .from('tutor_profiles')
-        .select('bio, qualification, hourly_rate, tutor_type, profile_photo_url, verification_document_url')
+        .select('bio, qualification, hourly_rate, tutor_type, verified, profile_photo_url, verification_document_url')
         .eq('id', user.id)
         .single()
 
@@ -121,10 +182,10 @@ export default function TutorDashboard() {
         setQualification(tutorProfile.qualification || '')
         setHourlyRate(String(tutorProfile.hourly_rate ?? ''))
         setTutorType(tutorProfile.tutor_type || '')
+        setVerified(Boolean(tutorProfile.verified))
         setProfileSaved(true)
 
         if (tutorProfile.profile_photo_url) {
-          setProfilePhotoPath(tutorProfile.profile_photo_url)
           refreshPhotoUrl(tutorProfile.profile_photo_url)
         }
         if (tutorProfile.verification_document_url) {
@@ -159,7 +220,9 @@ export default function TutorDashboard() {
 
       const { data: bookingsData } = await supabase
         .from('bookings')
-        .select('id, payment_status, booking_status, student_id, profiles(full_name), classes!inner(id, title, price, scheduled_at, tutor_id)')
+        .select(
+          'id, payment_status, booking_status, student_id, profiles(full_name), classes!inner(id, title, price, scheduled_at, tutor_id)'
+        )
         .eq('classes.tutor_id', user.id)
 
       setBookings((bookingsData as unknown as BookingRow[]) || [])
@@ -183,13 +246,12 @@ export default function TutorDashboard() {
     if (!file || !userId) return
 
     setUploadingPhoto(true)
-    setUploadMessage('')
 
     const path = `${userId}/photo-${Date.now()}-${file.name}`
     const { error: uploadError } = await supabase.storage.from('tutor-uploads').upload(path, file)
 
     if (uploadError) {
-      setUploadMessage(uploadError.message)
+      showNotice('error', uploadError.message)
       setUploadingPhoto(false)
       return
     }
@@ -200,14 +262,13 @@ export default function TutorDashboard() {
       .eq('id', userId)
 
     if (dbError) {
-      setUploadMessage(dbError.message)
+      showNotice('error', dbError.message)
       setUploadingPhoto(false)
       return
     }
 
-    setProfilePhotoPath(path)
     await refreshPhotoUrl(path)
-    setUploadMessage('Profile photo uploaded!')
+    showNotice('success', 'Profile photo uploaded.')
     setUploadingPhoto(false)
   }
 
@@ -216,13 +277,12 @@ export default function TutorDashboard() {
     if (!file || !userId) return
 
     setUploadingDoc(true)
-    setUploadMessage('')
 
     const path = `${userId}/verification-${Date.now()}-${file.name}`
     const { error: uploadError } = await supabase.storage.from('tutor-uploads').upload(path, file)
 
     if (uploadError) {
-      setUploadMessage(uploadError.message)
+      showNotice('error', uploadError.message)
       setUploadingDoc(false)
       return
     }
@@ -233,13 +293,13 @@ export default function TutorDashboard() {
       .eq('id', userId)
 
     if (dbError) {
-      setUploadMessage(dbError.message)
+      showNotice('error', dbError.message)
       setUploadingDoc(false)
       return
     }
 
     setVerificationDocPath(path)
-    setUploadMessage('Verification document uploaded!')
+    showNotice('success', 'Verification document uploaded.')
     setUploadingDoc(false)
   }
 
@@ -258,10 +318,10 @@ export default function TutorDashboard() {
     })
 
     if (error) {
-      setMessage(error.message)
+      showNotice('error', error.message)
     } else {
       setProfileSaved(true)
-      setMessage(wasAlreadySaved ? 'Profile updated!' : 'Profile saved!')
+      showNotice('success', wasAlreadySaved ? 'Profile updated.' : 'Profile saved.')
     }
   }
 
@@ -281,7 +341,6 @@ export default function TutorDashboard() {
 
   const handleSaveAvailability = async () => {
     if (!userId) return
-    setAvailabilityMessage('')
 
     const enabledDays = Object.entries(availability).filter(([, v]) => v.enabled)
     const disabledDays = Object.entries(availability).filter(([, v]) => !v.enabled)
@@ -299,7 +358,7 @@ export default function TutorDashboard() {
         .upsert(rows, { onConflict: 'tutor_id,day_of_week' })
 
       if (error) {
-        setAvailabilityMessage(error.message)
+        showNotice('error', error.message)
         return
       }
     }
@@ -313,7 +372,7 @@ export default function TutorDashboard() {
         .in('day_of_week', dayNumbers)
     }
 
-    setAvailabilityMessage('Availability saved!')
+    showNotice('success', 'Availability saved.')
   }
 
   const handleCreateClass = async (e: React.FormEvent) => {
@@ -333,7 +392,7 @@ export default function TutorDashboard() {
       .single()
 
     if (error) {
-      setMessage(error.message)
+      showNotice('error', error.message)
       return
     }
 
@@ -341,7 +400,7 @@ export default function TutorDashboard() {
     setTitle('')
     setScheduledAt('')
     setPrice('')
-    setMessage('Class created!')
+    showNotice('success', 'Class created. Students can now book it.')
   }
 
   const handleRequestPayout = async (amount: number) => {
@@ -354,32 +413,49 @@ export default function TutorDashboard() {
       .single()
 
     if (error) {
-      setMessage(error.message)
+      showNotice('error', error.message)
       return
     }
 
     setPayouts([data, ...payouts])
-    setMessage('Payout requested!')
+    showNotice('success', 'Payout requested.')
   }
 
   const handleNotifyStudent = async (bookingId: string, studentId: string, classTitle: string) => {
-    await supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert({
       user_id: studentId,
       title: 'Class Reminder',
       message: `Your tutor sent a reminder for "${classTitle}". Go to My Learning to view your class and join when it starts.`,
     })
-    setNotifiedBookings((prev) => new Set(prev).add(bookingId))
+
+    if (error) {
+      showNotice('error', error.message)
+      return
+    }
+
+    setNotified((prev) => ({ ...prev, [bookingId]: true }))
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center text-[#1C3529]">Loading...</div>
+    return (
+      <main className="min-h-screen bg-[#F3F5F7] px-4 pt-5">
+        <div className="max-w-5xl mx-auto space-y-4 animate-pulse">
+          <div className="h-24 bg-[#E6EAEE] rounded-[14px]" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-[#E6EAEE] rounded-[14px]" />
+            ))}
+          </div>
+        </div>
+      </main>
+    )
   }
 
   if (notTutor) {
     return (
-      <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center">
-        <p className="text-[#332B1F]">This page is only for tutor accounts.</p>
-      </div>
+      <main className="min-h-screen bg-[#F3F5F7] flex items-center justify-center px-4">
+        <p className="text-[#566274]">This page is only for tutor accounts.</p>
+      </main>
     )
   }
 
@@ -396,386 +472,517 @@ export default function TutorDashboard() {
   const totalRequested = payouts.reduce((sum, p) => sum + p.amount, 0)
   const availableForPayout = netPayable - totalRequested
 
-  return (
-    <div className="min-h-screen bg-[#F6F3EC] px-4 py-10">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1
-          className="text-3xl font-semibold text-[#1C3529]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Welcome, {fullName}
-        </h1>
+  const classPrice = Number(price) || 0
+  const youReceive = classPrice * (1 - PLATFORM_COMMISSION_RATE)
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-5 py-2 rounded-full text-sm font-medium border ${
-              activeTab === 'profile'
-                ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                : 'bg-white text-[#1C3529] border-[#D8D2C4]'
-            }`}
-          >
-            Profile Setup
-          </button>
-          <button
-            onClick={() => setActiveTab('earnings')}
-            className={`px-5 py-2 rounded-full text-sm font-medium border ${
-              activeTab === 'earnings'
-                ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                : 'bg-white text-[#1C3529] border-[#D8D2C4]'
-            }`}
-          >
-            Earnings & Classes
-          </button>
+  const typeLabel =
+    tutorType === 'teacher' ? 'Teacher' : tutorType === 'university_student' ? 'University student' : null
+
+  return (
+    <main className="min-h-screen bg-[#F3F5F7] px-4 pt-5 pb-10">
+      <div className="max-w-5xl mx-auto space-y-4">
+        {/* Header */}
+        <section className="bg-white border border-[#DDE2E8] rounded-[14px] p-4 sm:p-5 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-[#CFE6E7] shrink-0 flex items-center justify-center text-xl font-extrabold text-[#0A7B83]">
+            {profilePhotoSignedUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profilePhotoSignedUrl} alt="Your profile photo" className="w-full h-full object-cover" />
+            ) : (
+              initialsOf(fullName) || '?'
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm text-[#566274]">Tutor dashboard</p>
+            <h1 className="text-xl font-extrabold tracking-tight text-[#0F1B2D] truncate">{fullName}</h1>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {typeLabel && <Chip tone="neutral">{typeLabel}</Chip>}
+              {verified ? (
+                <Chip tone="good">Verified</Chip>
+              ) : verificationDocPath ? (
+                <Chip tone="wait">Waiting for review</Chip>
+              ) : (
+                <Chip tone="bad">Not verified</Chip>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Summary tiles */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-4">
+            <p className="text-[13px] text-[#566274]">Available to withdraw</p>
+            <p className="text-[22px] font-extrabold text-[#075A61] mt-1">RM{availableForPayout.toFixed(2)}</p>
+          </div>
+          <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-4">
+            <p className="text-[13px] text-[#566274]">Upcoming classes</p>
+            <p className="text-[22px] font-extrabold mt-1">{upcomingCount}</p>
+          </div>
+          <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-4">
+            <p className="text-[13px] text-[#566274]">Active students</p>
+            <p className="text-[22px] font-extrabold mt-1">{activeStudents}</p>
+          </div>
+          <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-4">
+            <p className="text-[13px] text-[#566274]">Completed classes</p>
+            <p className="text-[22px] font-extrabold mt-1">{completedCount}</p>
+          </div>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-6 border-b border-[#DDE2E8]">
+          {(
+            [
+              { id: 'profile', label: 'Profile & setup' },
+              { id: 'earnings', label: 'Earnings & classes' },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              aria-pressed={activeTab === t.id}
+              className={`pt-2 pb-3 -mb-px text-sm border-b-[3px] ${
+                activeTab === t.id
+                  ? 'font-bold text-[#0A7B83] border-[#0A7B83]'
+                  : 'font-semibold text-[#566274] border-transparent'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* PROFILE TAB */}
         {activeTab === 'profile' && (
-          <div className="space-y-6">
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Your Tutor Profile</h2>
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#1C3529] mb-2">I am a...</label>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setTutorType('teacher')}
-                      className={`flex-1 py-2 rounded-full border text-sm font-medium ${
-                        tutorType === 'teacher'
-                          ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                          : 'border-[#D8D2C4] text-[#1C3529]'
-                      }`}
-                    >
-                      Teacher
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTutorType('university_student')}
-                      className={`flex-1 py-2 rounded-full border text-sm font-medium ${
-                        tutorType === 'university_student'
-                          ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                          : 'border-[#D8D2C4] text-[#1C3529]'
-                      }`}
-                    >
-                      University Student
-                    </button>
-                  </div>
-                </div>
+          <div className="grid lg:grid-cols-2 gap-4 items-start">
+            <div className="space-y-4">
+              <Panel title="Your tutor profile" description="Students see this before they book you.">
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <fieldset>
+                    <legend className={labelClass}>I am a</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'teacher', label: 'Teacher' },
+                        { value: 'university_student', label: 'University student' },
+                      ].map((o) => (
+                        <button
+                          key={o.value}
+                          type="button"
+                          aria-pressed={tutorType === o.value}
+                          onClick={() => setTutorType(o.value)}
+                          className={`h-12 rounded-[10px] text-sm ${
+                            tutorType === o.value
+                              ? 'border-2 border-[#0A7B83] bg-[#E1F1F2] text-[#075A61] font-bold'
+                              : 'border border-[#C5CDD6] bg-white text-[#0F1B2D] font-medium'
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
 
-                <div>
-                  <label className={labelClass}>Bio</label>
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    className={inputClass}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Qualification</label>
-                  <input
-                    type="text"
-                    value={qualification}
-                    onChange={(e) => setQualification(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Hourly Rate (RM)</label>
-                  <input
-                    type="number"
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <button type="submit" className={primaryButtonClass}>
-                  {profileSaved ? 'Update Profile' : 'Save Profile'}
-                </button>
-              </form>
-              {message && <p className="text-sm text-[#4A4437] mt-3">{message}</p>}
-            </div>
-
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Verification Documents</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className={labelClass}>Profile Photo</label>
-                  {profilePhotoSignedUrl && (
-                    <img
-                      src={profilePhotoSignedUrl}
-                      alt="Profile"
-                      className="w-20 h-20 rounded-full object-cover mb-2 border-2 border-[#D8D2C4]"
+                  <div>
+                    <label htmlFor="bio" className={labelClass}>Bio</label>
+                    <textarea
+                      id="bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      rows={4}
+                      placeholder="Tell students how you teach and what you are good at."
+                      className="w-full px-3.5 py-3 rounded-[10px] border border-[#C5CDD6] bg-white text-base text-[#0F1B2D] outline-none focus:border-[#0A7B83] focus:ring-4 focus:ring-[#E1F1F2]"
                     />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    disabled={uploadingPhoto}
-                    className="text-sm"
-                  />
-                  {uploadingPhoto && <p className="text-xs text-[#4A4437] mt-1">Uploading...</p>}
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Verification Document (e.g. degree certificate, IC)
-                  </label>
-                  {verificationDocPath && (
-                    <p className="text-sm text-[#2B5D45] mb-2">✓ Document uploaded</p>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleDocUpload}
-                    disabled={uploadingDoc}
-                    className="text-sm"
-                  />
-                  {uploadingDoc && <p className="text-xs text-[#4A4437] mt-1">Uploading...</p>}
-                </div>
-
-                {uploadMessage && <p className="text-sm text-[#4A4437]">{uploadMessage}</p>}
-              </div>
-            </div>
-
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Weekly Availability</h2>
-              <p className="text-sm text-[#4A4437] mb-4">
-                Toggle the days you&apos;re generally available and set your hours. This helps students know when to expect you&apos;re free.
-              </p>
-              <div className="space-y-3">
-                {DAY_NAMES.map((name, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 w-28">
-                      <input
-                        type="checkbox"
-                        checked={availability[index].enabled}
-                        onChange={() => toggleDay(index)}
-                      />
-                      <span className="text-sm text-[#1C3529]">{name}</span>
-                    </label>
-                    {availability[index].enabled && (
-                      <>
-                        <input
-                          type="time"
-                          value={availability[index].start}
-                          onChange={(e) => updateDayTime(index, 'start', e.target.value)}
-                          className="rounded-lg border border-[#D8D2C4] px-2 py-1 text-sm"
-                        />
-                        <span className="text-[#4A4437] text-sm">to</span>
-                        <input
-                          type="time"
-                          value={availability[index].end}
-                          onChange={(e) => updateDayTime(index, 'end', e.target.value)}
-                          className="rounded-lg border border-[#D8D2C4] px-2 py-1 text-sm"
-                        />
-                      </>
-                    )}
                   </div>
-                ))}
-              </div>
-              <button onClick={handleSaveAvailability} className={`mt-4 ${primaryButtonClass}`}>
-                Save Availability
-              </button>
-              {availabilityMessage && <p className="text-sm text-[#4A4437] mt-3">{availabilityMessage}</p>}
+
+                  <div>
+                    <label htmlFor="qualification" className={labelClass}>Qualification</label>
+                    <input
+                      id="qualification"
+                      type="text"
+                      value={qualification}
+                      onChange={(e) => setQualification(e.target.value)}
+                      placeholder="e.g. BEd Mathematics, UKM"
+                      className={fieldClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rate" className={labelClass}>Hourly rate</label>
+                    <div className="flex items-center h-12 rounded-[10px] border border-[#C5CDD6] bg-white overflow-hidden focus-within:border-[#0A7B83] focus-within:ring-4 focus-within:ring-[#E1F1F2]">
+                      <span className="self-stretch flex items-center px-3.5 bg-[#F3F5F7] border-r border-[#C5CDD6] text-sm font-bold text-[#566274]">
+                        RM
+                      </span>
+                      <input
+                        id="rate"
+                        type="number"
+                        inputMode="decimal"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                        className="flex-1 min-w-0 h-full px-3.5 bg-transparent outline-none text-base"
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className={`${primaryButton} w-full sm:w-auto`}>
+                    {profileSaved ? 'Update profile' : 'Save profile'}
+                  </button>
+                </form>
+              </Panel>
+
+              <Panel
+                title="Photo and verification"
+                description="A clear photo helps students trust you. Your document is only seen by our admin team."
+              >
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-[#CFE6E7] shrink-0 flex items-center justify-center text-xl font-extrabold text-[#0A7B83]">
+                      {profilePhotoSignedUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={profilePhotoSignedUrl} alt="Your profile photo" className="w-full h-full object-cover" />
+                      ) : (
+                        initialsOf(fullName) || '?'
+                      )}
+                    </div>
+                    <div>
+                      <label className={`${secondaryButton} cursor-pointer`}>
+                        {uploadingPhoto ? 'Uploading...' : profilePhotoSignedUrl ? 'Change photo' : 'Add photo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          disabled={uploadingPhoto}
+                          className="sr-only"
+                        />
+                      </label>
+                      <p className="text-[13px] text-[#566274] mt-1.5">JPG or PNG</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#DDE2E8] pt-5">
+                    <p className={labelClass}>Verification document</p>
+                    <p className="text-[13px] text-[#566274] mb-3">Degree certificate or IC. PDF or image.</p>
+                    {verificationDocPath && (
+                      <p className="mb-3">
+                        <Chip tone={verified ? 'good' : 'wait'}>
+                          {verified ? 'Verified' : 'Uploaded, waiting for review'}
+                        </Chip>
+                      </p>
+                    )}
+                    <label className={`${secondaryButton} cursor-pointer`}>
+                      {uploadingDoc ? 'Uploading...' : verificationDocPath ? 'Replace document' : 'Upload document'}
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleDocUpload}
+                        disabled={uploadingDoc}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </Panel>
             </div>
 
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Create a Class</h2>
-              <form onSubmit={handleCreateClass} className="space-y-4">
-                <div>
-                  <label className={labelClass}>Subject</label>
-                  <select
-                    required
-                    value={subjectId}
-                    onChange={(e) => setSubjectId(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select a subject</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.education_level})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Class Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. Form 5 Add Maths - Differentiation"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Price (RM)</label>
-                  <input
-                    type="number"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <button type="submit" className={primaryButtonClass}>
-                  Create Class
+            <div className="space-y-4">
+              <Panel title="Create a class" description="Students can book it as soon as you create it.">
+                <form onSubmit={handleCreateClass} className="space-y-4">
+                  <div>
+                    <label htmlFor="subject" className={labelClass}>Subject</label>
+                    <select
+                      id="subject"
+                      required
+                      value={subjectId}
+                      onChange={(e) => setSubjectId(e.target.value)}
+                      className={fieldClass}
+                    >
+                      <option value="">Select a subject</option>
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.education_level})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-title" className={labelClass}>Class title</label>
+                    <input
+                      id="class-title"
+                      type="text"
+                      required
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Form 5 Add Maths: Differentiation"
+                      className={fieldClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-when" className={labelClass}>Date and time</label>
+                    <input
+                      id="class-when"
+                      type="datetime-local"
+                      required
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className={fieldClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="class-price" className={labelClass}>Price</label>
+                    <div className="flex items-center h-12 rounded-[10px] border border-[#C5CDD6] bg-white overflow-hidden focus-within:border-[#0A7B83] focus-within:ring-4 focus-within:ring-[#E1F1F2]">
+                      <span className="self-stretch flex items-center px-3.5 bg-[#F3F5F7] border-r border-[#C5CDD6] text-sm font-bold text-[#566274]">
+                        RM
+                      </span>
+                      <input
+                        id="class-price"
+                        type="number"
+                        inputMode="decimal"
+                        required
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="flex-1 min-w-0 h-full px-3.5 bg-transparent outline-none text-base"
+                      />
+                    </div>
+                    <p className="text-[13px] text-[#566274] mt-1.5">
+                      You receive RM{youReceive.toFixed(2)} after the {(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}% platform fee.
+                    </p>
+                  </div>
+
+                  <button type="submit" className={`${primaryButton} w-full sm:w-auto`}>
+                    Create class
+                  </button>
+                </form>
+              </Panel>
+
+              <Panel
+                title="Weekly availability"
+                description="Turn on the days you are usually free. Students see this before they book."
+              >
+                <ul className="divide-y divide-[#EBEEF2]">
+                  {DAY_NAMES.map((name, index) => {
+                    const day = availability[index]
+                    return (
+                      <li key={index} className="py-3 flex flex-wrap items-center gap-x-3 gap-y-2 min-h-14">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={day.enabled}
+                          aria-label={`Available on ${name}`}
+                          onClick={() => toggleDay(index)}
+                          className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${
+                            day.enabled ? 'bg-[#0A7B83]' : 'bg-[#C5CDD6]'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                              day.enabled ? 'left-6' : 'left-1'
+                            }`}
+                          />
+                        </button>
+                        <span className="w-24 text-sm font-semibold">{name}</span>
+                        {day.enabled ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              aria-label={`${name} start time`}
+                              value={day.start}
+                              onChange={(e) => updateDayTime(index, 'start', e.target.value)}
+                              className="h-11 w-[116px] px-2.5 rounded-[10px] border border-[#C5CDD6] bg-white text-base"
+                            />
+                            <span className="text-sm text-[#566274]">to</span>
+                            <input
+                              type="time"
+                              aria-label={`${name} end time`}
+                              value={day.end}
+                              onChange={(e) => updateDayTime(index, 'end', e.target.value)}
+                              className="h-11 w-[116px] px-2.5 rounded-[10px] border border-[#C5CDD6] bg-white text-base"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[#566274]">Not available</span>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+                <button onClick={handleSaveAvailability} className={`${primaryButton} mt-4 w-full sm:w-auto`}>
+                  Save availability
                 </button>
-              </form>
+              </Panel>
             </div>
           </div>
         )}
 
+        {/* EARNINGS TAB */}
         {activeTab === 'earnings' && (
-          <div className="space-y-6">
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Earnings Dashboard</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#F6F3EC] rounded-lg p-4">
-                  <p className="text-sm text-[#4A4437]">Gross Earnings</p>
-                  <p className="text-2xl font-semibold text-[#2B5D45]">RM{grossEarnings.toFixed(2)}</p>
-                </div>
-                <div className="bg-[#F6F3EC] rounded-lg p-4">
-                  <p className="text-sm text-[#4A4437]">Active Students</p>
-                  <p className="text-2xl font-semibold text-[#1C3529]">{activeStudents}</p>
-                </div>
-                <div className="bg-[#F6F3EC] rounded-lg p-4">
-                  <p className="text-sm text-[#4A4437]">Upcoming Classes</p>
-                  <p className="text-2xl font-semibold text-[#1C3529]">{upcomingCount}</p>
-                </div>
-                <div className="bg-[#F6F3EC] rounded-lg p-4">
-                  <p className="text-sm text-[#4A4437]">Completed Classes</p>
-                  <p className="text-2xl font-semibold text-[#1C3529]">{completedCount}</p>
-                </div>
-              </div>
-
-              {bookings.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-[#1C3529] mb-2">Bookings</h3>
-                  <ul className="space-y-2">
-                    {bookings.map((b) => (
-                      <li key={b.id} className="border border-[#D8D2C4] rounded-lg p-3 text-sm">
-                        <p className="font-medium text-[#1C3529]">{b.classes?.title}</p>
-                        <p className="text-[#4A4437]">
-                          Student: {b.profiles?.full_name ?? 'Unknown'} · {b.payment_status} · {b.booking_status}
-                        </p>
-                        {b.payment_status === 'paid' && b.booking_status !== 'cancelled' && (
-                          <div className="flex items-center gap-4 mt-2">
-                            <Link
-                              href={`/classroom/${b.id}`}
-                              className="text-[#2B5D45] underline text-xs font-medium"
-                            >
-                              Enter Classroom
-                            </Link>
-                            {notifiedBookings.has(b.id) ? (
-                              <span className="text-[#2B5D45] text-xs font-medium">✓ Notified successfully</span>
-                            ) : (
-                              <button
-                                onClick={() => handleNotifyStudent(b.id, b.student_id, b.classes?.title ?? 'your class')}
-                                className="text-[#1C3529] underline text-xs font-medium"
-                              >
-                                Notify Student
-                              </button>
-                            )}
+          <div className="grid lg:grid-cols-3 gap-4 items-start">
+            <div className="lg:col-span-2 space-y-4">
+              <Panel title="Bookings">
+                {bookings.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="font-bold">No bookings yet</p>
+                    <p className="text-sm text-[#566274] mt-1">
+                      When a student books one of your classes, it shows up here.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {bookings.map((b) => {
+                      const canJoin = b.payment_status === 'paid' && b.booking_status !== 'cancelled'
+                      return (
+                        <li key={b.id} className="border border-[#DDE2E8] rounded-xl p-3.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-bold text-[15px]">{b.classes?.title}</p>
+                              <p className="text-[13px] text-[#566274] mt-0.5">
+                                {b.profiles?.full_name ?? 'Unknown student'}
+                                {b.classes?.scheduled_at ? `, ${formatDate(b.classes.scheduled_at)}` : ''}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                              <Chip tone={b.payment_status === 'paid' ? 'good' : 'wait'}>{b.payment_status}</Chip>
+                              {b.booking_status === 'cancelled' && <Chip tone="bad">Cancelled</Chip>}
+                            </div>
                           </div>
-                        )}
+
+                          {canJoin && (
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                              <Link
+                                href={`/classroom/${b.id}`}
+                                className="h-11 px-4 rounded-[10px] bg-[#0A7B83] text-white text-sm font-bold hover:bg-[#075A61] inline-flex items-center"
+                              >
+                                Enter classroom
+                              </Link>
+                              {notified[b.id] ? (
+                                <span className="h-11 px-2 inline-flex items-center text-sm font-bold text-[#075A61]">
+                                  ✓ Notified successfully
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    handleNotifyStudent(b.id, b.student_id, b.classes?.title ?? 'your class')
+                                  }
+                                  className={secondaryButton}
+                                >
+                                  Notify student
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </Panel>
+
+              <Panel title="Your classes">
+                {classes.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="font-bold">No classes yet</p>
+                    <p className="text-sm text-[#566274] mt-1">Create your first class in Profile &amp; setup.</p>
+                    <button onClick={() => setActiveTab('profile')} className={`${secondaryButton} mt-3`}>
+                      Create a class
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-[#EBEEF2]">
+                    {classes.map((c) => (
+                      <li key={c.id} className="py-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[15px]">{c.title}</p>
+                          <p className="text-[13px] text-[#566274] mt-0.5">{formatDate(c.scheduled_at)}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-extrabold text-[15px]">RM{c.price}</p>
+                          <Chip tone={c.status === 'open' ? 'good' : 'neutral'}>{c.status}</Chip>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
+                )}
+              </Panel>
             </div>
 
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Commission & Payouts</h2>
-
-              <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-[#4A4437]">Gross Earnings</span>
-                  <span className="font-medium text-[#1C3529]">RM{grossEarnings.toFixed(2)}</span>
+            <div className="space-y-4 lg:sticky lg:top-20">
+              <Panel title="Earnings and payouts">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#566274]">Gross earnings</span>
+                    <span className="font-semibold">RM{grossEarnings.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#566274]">
+                      Platform fee ({(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}%)
+                    </span>
+                    <span className="font-semibold text-[#A23E2A]">- RM{platformCommission.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-[#DDE2E8] pt-2">
+                    <span className="font-bold">Net earnings</span>
+                    <span className="font-extrabold">RM{netPayable.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#566274]">Already requested</span>
+                    <span className="font-semibold">- RM{totalRequested.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-[#C6503F]">
-                  <span>Platform Commission ({(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}%)</span>
-                  <span>- RM{platformCommission.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between border-t border-[#D8D2C4] pt-2 font-semibold text-[#1C3529]">
-                  <span>Net Payable to You</span>
-                  <span>RM{netPayable.toFixed(2)}</span>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between bg-[#F6F3EC] rounded-lg p-4 mb-4">
-                <div>
-                  <p className="text-sm text-[#4A4437]">Available for Payout</p>
-                  <p className="text-2xl font-semibold text-[#2B5D45]">RM{availableForPayout.toFixed(2)}</p>
+                <div className="mt-4 bg-[#E1F1F2] rounded-xl p-4">
+                  <p className="text-[13px] text-[#075A61]">Available to withdraw</p>
+                  <p className="text-[26px] font-extrabold text-[#075A61]">RM{availableForPayout.toFixed(2)}</p>
+                  <button
+                    onClick={() => handleRequestPayout(availableForPayout)}
+                    disabled={availableForPayout <= 0}
+                    className={`${primaryButton} w-full mt-3`}
+                  >
+                    Request payout
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleRequestPayout(availableForPayout)}
-                  disabled={availableForPayout <= 0}
-                  className={primaryButtonClass}
-                >
-                  Request Payout
-                </button>
-              </div>
 
-              {payouts.length === 0 ? (
-                <p className="text-[#4A4437] text-sm">No payout requests yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {payouts.map((p) => (
-                    <li key={p.id} className="flex justify-between border border-[#D8D2C4] rounded-lg p-3 text-sm">
-                      <span className="text-[#1C3529]">RM{p.amount.toFixed(2)} · requested {new Date(p.requested_at).toLocaleDateString()}</span>
-                      <span
-                        className={`font-medium capitalize ${
-                          p.status === 'paid'
-                            ? 'text-[#2B5D45]'
-                            : p.status === 'approved'
-                            ? 'text-[#1C3529]'
-                            : 'text-[#4A4437]'
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className={cardClass}>
-              <h2 className="text-xl font-semibold text-[#1C3529] mb-4">Your Classes</h2>
-              {classes.length === 0 ? (
-                <p className="text-[#4A4437]">No classes created yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {classes.map((c) => (
-                    <li key={c.id} className="border border-[#D8D2C4] rounded-lg p-3">
-                      <p className="font-medium text-[#1C3529]">{c.title}</p>
-                      <p className="text-sm text-[#4A4437]">
-                        {new Date(c.scheduled_at).toLocaleString()} - RM{c.price} - {c.status}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                <h3 className="text-sm font-bold mt-5 mb-2">Payout history</h3>
+                {payouts.length === 0 ? (
+                  <p className="text-sm text-[#566274]">No payout requests yet.</p>
+                ) : (
+                  <ul className="divide-y divide-[#EBEEF2]">
+                    {payouts.map((p) => (
+                      <li key={p.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
+                        <div>
+                          <p className="font-semibold">RM{p.amount.toFixed(2)}</p>
+                          <p className="text-[13px] text-[#566274]">
+                            {new Date(p.requested_at).toLocaleDateString('en-MY', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                        <Chip tone={p.status === 'paid' ? 'good' : p.status === 'approved' ? 'neutral' : 'wait'}>
+                          {p.status}
+                        </Chip>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
             </div>
           </div>
         )}
       </div>
-    </div>
+
+      {/* Notice */}
+      {notice && (
+        <div
+          role="status"
+          className={`fixed z-50 left-4 right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:left-auto md:right-6 md:bottom-6 md:w-96 rounded-xl px-4 py-3.5 text-sm font-semibold shadow-lg flex items-start justify-between gap-3 ${
+            notice.type === 'success' ? 'bg-[#075A61] text-white' : 'bg-[#A23E2A] text-white'
+          }`}
+        >
+          <span>{notice.text}</span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss" className="shrink-0 -mt-1 -mr-1 w-8 h-8 text-lg leading-none">
+            ×
+          </button>
+        </div>
+      )}
+    </main>
   )
 }
