@@ -106,6 +106,25 @@ export default function BrowsePage() {
           .single()
         setRole(profile?.role ?? null)
         setFullName(profile?.full_name ?? '')
+
+        if (profile?.role === 'student') {
+          const { data: myBookings } = await supabase
+            .from('bookings')
+            .select('id, class_id, payment_status, booking_status')
+            .eq('student_id', user.id)
+            .neq('booking_status', 'cancelled')
+
+          if (myBookings) {
+            const map: Record<string, { id: string; state: BookingState }> = {}
+            myBookings.forEach((b) => {
+              map[b.class_id] = {
+                id: b.id,
+                state: b.payment_status === 'paid' ? 'paid' : 'awaiting_payment',
+              }
+            })
+            setBookings(map)
+          }
+        }
       }
 
       const { data, error } = await supabase
@@ -114,6 +133,7 @@ export default function BrowsePage() {
           'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, tutor_type, verified, profile_photo_url, profiles(full_name))'
         )
         .eq('status', 'open')
+        .gt('scheduled_at', new Date().toISOString())
         .order('scheduled_at')
 
       if (!error && data) {
@@ -370,7 +390,9 @@ export default function BrowsePage() {
         ) : filtered.length === 0 ? (
           <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-8 text-center space-y-3">
             <p className="font-bold">No classes match your search</p>
-            <p className="text-sm text-[#566274]">Try another subject, or remove some filters.</p>
+            <p className="text-sm text-[#566274]">
+              Try another subject, or remove some filters. Only upcoming classes are shown.
+            </p>
             <button onClick={clearFilters} className="h-11 px-5 rounded-[10px] border border-[#0A7B83] text-[#075A61] font-bold text-sm">
               Clear filters
             </button>
@@ -393,7 +415,7 @@ export default function BrowsePage() {
                     <div className="relative h-40 bg-[#E6EAEE]">
                       <TutorPhoto name={tutorName} url={photoUrl} />
                       {c.tutor_profiles?.verified && (
-                        <span className="absolute top-2.5 left-2.5 h-6 px-2 rounded-xl bg-white text-[#0A7B83] text-xs font-bold flex items-center gap-1">
+                        <span className="absolute top-2.5 left-2.5 h-6 px-2 rounded-xl bg-white border border-[#C5CDD6] text-[#0A7B83] text-xs font-bold flex items-center gap-1">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="m5 12 5 5 9-10" />
                           </svg>
