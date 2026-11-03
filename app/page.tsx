@@ -11,9 +11,7 @@ const reasons = [
   {
     title: 'Tutors are checked',
     text: 'Our team reviews each tutor’s certificate or ID before they get a Verified tag.',
-    icon: (
-      <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4" />
-    ),
+    icon: <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4" />,
   },
   {
     title: 'Live class, no download',
@@ -66,37 +64,63 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Sample card */}
-        <div className="relative max-w-sm w-full mx-auto md:ml-auto">
-          <div className="bg-white border border-[#DDE2E8] rounded-[14px] overflow-hidden shadow-sm">
-            <div className="relative h-44 bg-[#CFE6E7] flex items-center justify-center text-6xl font-extrabold text-[#0A7B83]">
-              NA
-              <span className="absolute top-3 left-3 h-6 px-2 rounded-xl bg-white text-[#0A7B83] text-xs font-bold flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 5 5 9-10" />
-                </svg>
-                Verified
-              </span>
-            </div>
-            <div className="p-4 space-y-1">
-              <p className="text-[17px] font-bold text-[#0F1B2D]">Nurul Aisyah</p>
-              <p className="text-sm text-[#566274]">Form 5 Add Maths: Differentiation</p>
-              <p className="text-sm text-[#566274]">Sat, 14 Nov, 4:00 pm</p>
-              <div className="flex items-center justify-between pt-2">
-                <span className="flex items-center gap-1 text-sm font-semibold">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8A317" aria-hidden="true">
-                    <polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.2 21 12 17.5 5.8 21 7.2 14 2 9.3 8.9 8.6" />
-                  </svg>
-                  4.9
-                </span>
-                <span className="text-base font-extrabold">RM45</span>
-              </div>
-              <div className="mt-3 h-11 rounded-[10px] bg-[#0A7B83] text-white text-sm font-bold flex items-center justify-center">
-                Book now
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-[#566274] mt-2 text-center">Sample class, for illustration.</p>
+        {/* Book illustration */}
+        <div className="relative w-full max-w-md mx-auto md:mx-0 md:justify-self-end bg-[#E1F1F2] rounded-[24px] px-6 py-12 sm:px-8 sm:py-14">
+          <svg viewBox="0 0 400 300" className="w-full h-auto" aria-hidden="true">
+            {/* cover */}
+            <path
+              d="M44 70 L44 256 C108 240 172 242 200 264 C228 242 292 240 356 256 L356 70 Z"
+              fill="#075A61"
+            />
+            {/* left page */}
+            <path
+              d="M200 76 C170 56 110 54 56 68 L56 238 C110 224 170 226 200 248 Z"
+              fill="#FFFFFF"
+            />
+            {/* right page */}
+            <path
+              d="M200 76 C230 56 290 54 344 68 L344 238 C290 224 230 226 200 248 Z"
+              fill="#FFFFFF"
+            />
+            {/* spine */}
+            <path d="M200 76 L200 248" stroke="#DDE2E8" strokeWidth="3" />
+            {/* left text lines */}
+            <g stroke="#C5CDD6" strokeWidth="5" strokeLinecap="round" fill="none">
+              <path d="M84 102 C112 98 146 100 176 108" />
+              <path d="M84 128 C112 124 146 126 176 134" />
+              <path d="M84 154 C112 150 146 152 176 160" />
+              <path d="M84 180 C108 177 130 178 150 183" />
+            </g>
+            {/* right page: highlighted line + lines */}
+            <g strokeLinecap="round" fill="none">
+              <path d="M224 108 C254 100 288 98 316 102" stroke="#0A7B83" strokeWidth="6" />
+              <path d="M224 134 C254 126 288 124 316 128" stroke="#C5CDD6" strokeWidth="5" />
+              <path d="M224 160 C254 152 288 150 316 154" stroke="#C5CDD6" strokeWidth="5" />
+              <path d="M224 186 C246 180 268 178 290 180" stroke="#C5CDD6" strokeWidth="5" />
+            </g>
+            {/* star */}
+            <polygon
+              points="300,196 304,206 315,207 307,214 309,225 300,219 291,225 293,214 285,207 296,206"
+              fill="#E8A317"
+            />
+            {/* bookmark */}
+            <path d="M276 60 L276 124 L288 112 L300 124 L300 66 Z" fill="#E8A317" />
+          </svg>
+
+          <span className="absolute top-4 left-4 sm:top-5 sm:left-5 h-8 px-3 rounded-full bg-white text-[#075A61] text-sm font-bold flex items-center gap-1.5 shadow-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m5 12 5 5 9-10" />
+            </svg>
+            Verified tutors
+          </span>
+
+          <span className="absolute bottom-4 right-4 sm:bottom-5 sm:right-5 h-8 px-3 rounded-full bg-white text-[#075A61] text-sm font-bold flex items-center gap-1.5 shadow-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2" y="6" width="14" height="12" rx="3" />
+              <path d="m16 10 6-3v10l-6-3" />
+            </svg>
+            Live class in your browser
+          </span>
         </div>
       </section>
 
