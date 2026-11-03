@@ -10,6 +10,7 @@ type TutorRow = {
   qualification: string | null
   verified: boolean
   verification_document_url: string | null
+  profile_photo_url: string | null
   profiles: { full_name: string } | null
 }
 type BookingRow = {
@@ -61,6 +62,28 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .map((p) => p[0].toUpperCase())
     .join('')
+
+function Avatar({ name, url, size = 56 }: { name: string; url: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false)
+  return (
+    <div
+      className="rounded-full overflow-hidden bg-[#CFE6E7] text-[#0A7B83] font-extrabold flex items-center justify-center shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.36 }}
+    >
+      {url && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt={`Photo of ${name}`}
+          onError={() => setFailed(true)}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        initialsOf(name) || '?'
+      )}
+    </div>
+  )
+}
 
 function Chip({ tone, children }: { tone: 'good' | 'wait' | 'bad' | 'neutral'; children: React.ReactNode }) {
   const styles = {
@@ -124,6 +147,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [users, setUsers] = useState<UserRow[]>([])
   const [tutors, setTutors] = useState<TutorRow[]>([])
+  const [tutorPhotoUrls, setTutorPhotoUrls] = useState<Record<string, string>>({})
   const [bookings, setBookings] = useState<BookingRow[]>([])
   const [subjects, setSubjects] = useState<SubjectRow[]>([])
   const [complaints, setComplaints] = useState<ComplaintRow[]>([])
@@ -168,8 +192,23 @@ export default function AdminPage() {
 
       const { data: tutorsData } = await supabase
         .from('tutor_profiles')
-        .select('id, qualification, verified, verification_document_url, profiles(full_name)')
-      setTutors((tutorsData as unknown as TutorRow[]) || [])
+        .select('id, qualification, verified, verification_document_url, profile_photo_url, profiles(full_name)')
+      const tutorRows = (tutorsData as unknown as TutorRow[]) || []
+      setTutors(tutorRows)
+
+      const photoPaths = Array.from(
+        new Set(tutorRows.map((t) => t.profile_photo_url).filter(Boolean))
+      ) as string[]
+      if (photoPaths.length > 0) {
+        const { data: signed } = await supabase.storage.from('tutor-uploads').createSignedUrls(photoPaths, 3600)
+        if (signed) {
+          const map: Record<string, string> = {}
+          signed.forEach((s) => {
+            if (s.path && s.signedUrl) map[s.path] = s.signedUrl
+          })
+          setTutorPhotoUrls(map)
+        }
+      }
 
       const { data: bookingsData } = await supabase
         .from('bookings')
@@ -479,12 +518,11 @@ export default function AdminPage() {
               <ul className="space-y-3">
                 {visibleTutors.map((t) => {
                   const name = t.profiles?.full_name ?? 'Unknown tutor'
+                  const photoUrl = t.profile_photo_url ? tutorPhotoUrls[t.profile_photo_url] ?? null : null
                   return (
                     <li key={t.id} className="border border-[#DDE2E8] rounded-xl p-3.5">
                       <div className="flex items-start gap-3">
-                        <div className="w-11 h-11 rounded-full bg-[#CFE6E7] text-[#0A7B83] font-extrabold flex items-center justify-center shrink-0">
-                          {initialsOf(name) || '?'}
-                        </div>
+                        <Avatar name={name} url={photoUrl} size={64} />
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-[15px]">{name}</p>
                           <p className="text-[13px] text-[#566274]">{t.qualification || 'No qualification added'}</p>
@@ -499,6 +537,7 @@ export default function AdminPage() {
                             ) : (
                               <Chip tone="bad">No document</Chip>
                             )}
+                            {!t.profile_photo_url && <Chip tone="wait">No photo</Chip>}
                           </div>
                         </div>
                       </div>
