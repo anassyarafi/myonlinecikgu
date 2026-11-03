@@ -37,3 +37,63 @@ h1, h2, h3, h4 {
 input, textarea, select {
   color: #1C3529;
 }
+
+/* ===== B look: applies to every page ===== */
+body {
+  background-color: #F3F5F7;
+  color: #0F1B2D;
+}
+::selection {
+  background: #E1F1F2;
+  color: #075A61;
+}
+
+/* Page and card backgrounds */
+[class~="bg-[#F6F3EC]" i] { background-color: #F3F5F7 !important; }
+[class~="bg-[#EFEAE0]" i] { background-color: #EBEEF2 !important; }
+[class~="bg-[#DCEADF]" i] { background-color: #E1F1F2 !important; }
+
+/* Buttons and accents: green becomes teal */
+[class~="bg-[#2B5D45]" i] { background-color: #0A7B83 !important; }
+[class~="hover:bg-[#1F4634]" i]:hover { background-color: #075A61 !important; }
+[class~="bg-[#E3A73B]" i] { background-color: #E8A317 !important; }
+[class~="hover:bg-[#cf9333]" i]:hover { background-color: #D29512 !important; }
+
+/* Text */
+[class~="text-[#1C3529]" i],
+[class~="text-[#332B1F]" i] { color: #0F1B2D !important; }
+[class~="text-[#4A4437]" i] { color: #566274 !important; }
+[class~="text-[#2B5D45]" i] { color: #0A7B83 !important; }
+[class~="text-[#1F4634]" i],
+[class~="hover:text-[#1F4634]" i]:hover { color: #075A61 !important; }
+[class~="text-[#2B5D45]" i][class~="bg-[#DCEADF]" i] { color: #075A61 !important; }
+[class~="text-[#E3A73B]" i] { color: #946200 !important; }
+
+/* Borders */
+[class~="border-[#D8D2C4]" i] { border-color: #DDE2E8 !important; }
+[class~="border-[#EFEAE0]" i] { border-color: #EBEEF2 !important; }
+[class~="border-[#2B5D45]" i] { border-color: #0A7B83 !important; }
+[class~="border-2"][class~="border-[#D8D2C4]" i] { border-width: 1px !important; }
+
+/* Corners: cards 14px, buttons and fields 10px */
+[class~="rounded-2xl"] { border-radius: 14px !important; }
+[class~="rounded-xl"] { border-radius: 12px !important; }
+[class~="rounded-lg"] { border-radius: 10px !important; }
+:is(button, a)[class~="rounded-full"][class*="px-"] { border-radius: 10px !important; }
+
+/* Forms: bigger fields, clear focus, no zoom on iPhone */
+input, select, textarea {
+  border-radius: 10px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #0A7B83;
+  box-shadow: 0 0 0 4px #E1F1F2;
+}
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+    min-height: 48px;
+  }
+  textarea { min-height: 96px; }
+}
