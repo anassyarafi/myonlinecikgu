@@ -2,13 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+
+const fieldClass =
+  'w-full h-12 px-3.5 rounded-[10px] border border-[#C5CDD6] bg-white text-base text-[#0F1B2D] outline-none focus:border-[#0A7B83] focus:ring-4 focus:ring-[#E1F1F2]'
 
 export default function SignupPage() {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [role, setRole] = useState<'tutor' | 'student'>('student')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -42,10 +47,7 @@ export default function SignupPage() {
         return
       }
 
-      const { data: admins } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin')
+      const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
 
       if (admins && admins.length > 0) {
         const roleLabel = role === 'tutor' ? 'tutor' : 'student/parent'
@@ -62,91 +64,136 @@ export default function SignupPage() {
     router.push('/login')
   }
 
+  const roles: { value: 'student' | 'tutor'; title: string; text: string }[] = [
+    { value: 'student', title: 'Student or parent', text: 'Find tutors and book classes.' },
+    { value: 'tutor', title: 'Tutor', text: 'Teach classes and get paid.' },
+  ]
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F6F3EC] px-4">
-      <div className="w-full max-w-md bg-white border-2 border-[#D8D2C4] rounded-2xl p-8">
-        <h1
-          className="text-2xl font-semibold text-[#1C3529] mb-1"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Create your account
-        </h1>
-        <p className="text-[#4A4437] mb-6">Join MyOnlineCikgu as a tutor or student</p>
+    <main className="min-h-[calc(100vh-3.5rem)] flex items-start sm:items-center justify-center bg-[#F3F5F7] px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-6 sm:p-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#0F1B2D]">Create your account</h1>
+          <p className="text-sm text-[#566274] mt-1 mb-6">Join MyOnlineCikgu as a student, parent or tutor.</p>
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#1C3529] mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
-            />
-          </div>
+          <form onSubmit={handleSignup} className="space-y-4">
+            <fieldset>
+              <legend className="block text-[13px] font-semibold text-[#0F1B2D] mb-1.5">I am a</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {roles.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    aria-pressed={role === r.value}
+                    onClick={() => setRole(r.value)}
+                    className={`text-left rounded-[10px] p-3 min-h-[76px] ${
+                      role === r.value
+                        ? 'border-2 border-[#0A7B83] bg-[#E1F1F2]'
+                        : 'border border-[#C5CDD6] bg-white'
+                    }`}
+                  >
+                    <span
+                      className={`block text-sm ${
+                        role === r.value ? 'font-bold text-[#075A61]' : 'font-semibold text-[#0F1B2D]'
+                      }`}
+                    >
+                      {r.title}
+                    </span>
+                    <span className="block text-[13px] text-[#566274] mt-0.5">{r.text}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
-          <div>
-            <label className="block text-sm font-medium text-[#1C3529] mb-1">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#1C3529] mb-1">Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-[#D8D2C4] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2B5D45]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#1C3529] mb-2">I am a...</label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('student')}
-                className={`flex-1 py-2 rounded-full border font-medium ${
-                  role === 'student'
-                    ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                    : 'border-[#D8D2C4] text-[#1C3529]'
-                }`}
-              >
-                Student / Parent
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('tutor')}
-                className={`flex-1 py-2 rounded-full border font-medium ${
-                  role === 'tutor'
-                    ? 'bg-[#2B5D45] text-white border-[#2B5D45]'
-                    : 'border-[#D8D2C4] text-[#1C3529]'
-                }`}
-              >
-                Tutor
-              </button>
+            <div>
+              <label htmlFor="fullName" className="block text-[13px] font-semibold text-[#0F1B2D] mb-1.5">
+                Full name
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                required
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={fieldClass}
+              />
             </div>
-          </div>
 
-          {error && <p className="text-[#C6503F] text-sm">{error}</p>}
+            <div>
+              <label htmlFor="email" className="block text-[13px] font-semibold text-[#0F1B2D] mb-1.5">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                inputMode="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={fieldClass}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#2B5D45] text-white py-2.5 rounded-full font-medium hover:bg-[#1F4634] disabled:opacity-50"
-          >
-            {loading ? 'Creating account...' : 'Sign Up'}
-          </button>
-        </form>
+            <div>
+              <label htmlFor="password" className="block text-[13px] font-semibold text-[#0F1B2D] mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${fieldClass} pr-20`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-10 px-3 rounded-lg text-sm font-semibold text-[#0A7B83] hover:bg-[#E1F1F2]"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p className="text-[13px] text-[#566274] mt-1.5">At least 6 characters.</p>
+            </div>
+
+            {error && (
+              <p role="alert" className="text-sm font-medium text-[#A23E2A] bg-[#FDF3F1] rounded-[10px] px-3.5 py-3">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-[10px] bg-[#0A7B83] text-white font-bold hover:bg-[#075A61] disabled:opacity-50"
+            >
+              {loading ? 'Creating account...' : 'Create account'}
+            </button>
+
+            <p className="text-[13px] text-[#566274] text-center">
+              By creating an account you agree to our{' '}
+              <Link href="/privacy" className="font-semibold text-[#0A7B83] hover:underline">
+                privacy policy
+              </Link>
+              .
+            </p>
+          </form>
+        </div>
+
+        <p className="text-sm text-[#566274] text-center mt-5">
+          Already have an account?{' '}
+          <Link href="/login" className="font-bold text-[#0A7B83] hover:underline">
+            Log in
+          </Link>
+        </p>
       </div>
-    </div>
+    </main>
   )
 }
