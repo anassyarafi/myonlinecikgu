@@ -1,5 +1,5 @@
 // Replace this with your real contact email before publishing.
-const CONTACT_EMAIL = 'REPLACE-WITH-YOUR-EMAIL@example.com'
+const CONTACT_EMAIL = 'Admin@gmail.com'
 
 const LAST_UPDATED = '3 November 2026'
 
