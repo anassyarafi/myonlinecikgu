@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type ReceiptData = {
@@ -22,6 +23,25 @@ type ReceiptData = {
 
 const PLATFORM_COMMISSION_RATE = 0.15
 
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('en-MY', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+function Row({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4 text-sm">
+      <span className="text-[#566274] shrink-0">{label}</span>
+      <span className={`text-right ${strong ? 'font-bold' : 'font-semibold'} text-[#0F1B2D]`}>{value}</span>
+    </div>
+  )
+}
+
 export default function ReceiptPage() {
   const params = useParams()
   const router = useRouter()
@@ -33,7 +53,9 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -62,110 +84,109 @@ export default function ReceiptPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center text-[#1C3529]">
-        Loading...
-      </div>
+      <main className="min-h-screen bg-[#F3F5F7] px-4 pt-5">
+        <div className="max-w-md mx-auto h-96 bg-[#E6EAEE] rounded-[14px] animate-pulse" />
+      </main>
     )
   }
 
   if (notAllowed || !receipt) {
     return (
-      <div className="min-h-screen bg-[#F6F3EC] flex items-center justify-center">
-        <p className="text-[#332B1F]">Receipt not found or you don&apos;t have access.</p>
-      </div>
+      <main className="min-h-screen bg-[#F3F5F7] flex items-center justify-center px-4">
+        <div className="text-center">
+          <p className="font-bold text-[#0F1B2D]">Receipt not found</p>
+          <p className="text-sm text-[#566274] mt-1">It may not exist, or you may not have access to it.</p>
+          <Link
+            href="/my-learning"
+            className="mt-4 h-11 px-5 rounded-[10px] border border-[#0A7B83] bg-white text-[#075A61] text-sm font-bold hover:bg-[#E1F1F2] inline-flex items-center"
+          >
+            Back to My learning
+          </Link>
+        </div>
+      </main>
     )
   }
 
   const price = receipt.classes?.price || 0
-  const commission = price * PLATFORM_COMMISSION_RATE
+  const platformFee = price * PLATFORM_COMMISSION_RATE
   const isPaid = receipt.payment_status === 'paid'
   const isRefunded = receipt.payment_status === 'refunded'
 
+  const statusStyle = isPaid
+    ? 'bg-[#E1F1F2] text-[#075A61]'
+    : isRefunded
+    ? 'bg-[#F6DAD5] text-[#A23E2A]'
+    : 'bg-[#FCEFD2] text-[#8A6111]'
+  const statusLabel = isPaid ? 'Paid' : isRefunded ? 'Refunded' : 'Payment pending'
+
   return (
-    <div className="min-h-screen bg-[#F6F3EC] px-4 py-10 print:bg-white">
-      <div className="max-w-md mx-auto bg-white border-2 border-[#D8D2C4] rounded-2xl p-8 print:shadow-none print:border-0">
-        <div className="text-center mb-6 border-b-2 border-[#D8D2C4] pb-6">
-          <h1
-            className="text-2xl font-semibold text-[#2B5D45]"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            MyOnlineCikgu
-          </h1>
-          <p className="text-sm text-[#4A4437]">Digital Receipt</p>
-        </div>
+    <main className="min-h-screen bg-[#F3F5F7] px-4 pt-5 pb-10 print:bg-white print:p-0">
+      <div className="max-w-md mx-auto">
+        <Link
+          href="/my-learning"
+          className="inline-flex items-center gap-1 h-11 text-sm font-semibold text-[#0A7B83] hover:underline print:hidden"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m15 5-7 7 7 7" />
+          </svg>
+          My learning
+        </Link>
 
-        <div className="space-y-2 text-sm pb-4 border-b border-[#EFEAE0]">
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Receipt No.</span>
-            <span className="font-mono text-[#1C3529]">{receipt.id.slice(0, 8).toUpperCase()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Date Issued</span>
-            <span className="text-[#1C3529]">{new Date(receipt.created_at).toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Status</span>
-            <span
-              className={`font-semibold ${
-                isPaid ? 'text-[#2B5D45]' : isRefunded ? 'text-[#C6503F]' : 'text-[#4A4437]'
-              }`}
-            >
-              {isPaid ? 'Paid' : isRefunded ? 'Refunded' : receipt.payment_status}
+        <div className="bg-white border border-[#DDE2E8] rounded-[14px] overflow-hidden print:border-0">
+          <div className="p-6 text-center border-b border-[#DDE2E8]">
+            <span className="w-11 h-11 rounded-[12px] bg-[#0A7B83] inline-flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2z" />
+                <path d="M22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z" />
+              </svg>
+            </span>
+            <h1 className="text-xl font-extrabold tracking-tight text-[#0F1B2D] mt-3">MyOnlineCikgu</h1>
+            <p className="text-sm text-[#566274]">Digital receipt</p>
+            <span className={`inline-flex items-center h-7 px-3 rounded-full text-sm font-bold mt-3 ${statusStyle}`}>
+              {statusLabel}
             </span>
           </div>
-        </div>
 
-        <div className="space-y-2 text-sm py-4 border-b border-[#EFEAE0]">
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Student</span>
-            <span className="text-[#1C3529] font-medium">{receipt.profiles?.full_name ?? 'Unknown'}</span>
+          <div className="p-6 space-y-3 border-b border-[#EBEEF2]">
+            <Row label="Receipt no." value={<span className="font-mono">{receipt.id.slice(0, 8).toUpperCase()}</span>} />
+            <Row label="Date issued" value={formatDateTime(receipt.created_at)} />
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Tutor</span>
-            <span className="text-[#1C3529] font-medium">
-              {receipt.classes?.tutor_profiles?.profiles?.full_name ?? 'Unknown'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Class</span>
-            <span className="text-[#1C3529] text-right">{receipt.classes?.title}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Subject</span>
-            <span className="text-[#1C3529]">
-              {receipt.classes?.subjects?.name} ({receipt.classes?.subjects?.education_level})
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Scheduled</span>
-            <span className="text-[#1C3529]">
-              {receipt.classes?.scheduled_at && new Date(receipt.classes.scheduled_at).toLocaleString()}
-            </span>
-          </div>
-        </div>
 
-        <div className="space-y-2 text-sm py-4">
-          <div className="flex justify-between">
-            <span className="text-[#4A4437]">Class Fee</span>
-            <span className="text-[#1C3529]">RM{price.toFixed(2)}</span>
+          <div className="p-6 space-y-3 border-b border-[#EBEEF2]">
+            <Row label="Student" value={receipt.profiles?.full_name ?? 'Unknown'} />
+            <Row label="Tutor" value={receipt.classes?.tutor_profiles?.profiles?.full_name ?? 'Unknown'} />
+            <Row label="Class" value={receipt.classes?.title} />
+            <Row
+              label="Subject"
+              value={
+                receipt.classes?.subjects
+                  ? `${receipt.classes.subjects.name}, ${receipt.classes.subjects.education_level}`
+                  : '-'
+              }
+            />
+            <Row label="Scheduled" value={receipt.classes?.scheduled_at ? formatDateTime(receipt.classes.scheduled_at) : '-'} />
           </div>
-          <div className="flex justify-between text-[#4A4437]">
-            <span>Platform Commission ({(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}%)</span>
-            <span>RM{commission.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-semibold text-base text-[#1C3529] border-t-2 border-[#D8D2C4] pt-3 mt-3">
-            <span>Total {isRefunded ? 'Refunded' : 'Paid'}</span>
-            <span className="text-[#E3A73B]">RM{price.toFixed(2)}</span>
+
+          <div className="p-6 space-y-3">
+            <Row label="Class fee" value={`RM${price.toFixed(2)}`} />
+            <div className="flex justify-between gap-4 text-[13px] text-[#566274]">
+              <span>Includes platform fee ({(PLATFORM_COMMISSION_RATE * 100).toFixed(0)}%)</span>
+              <span>RM{platformFee.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center border-t border-[#DDE2E8] pt-4">
+              <span className="font-bold text-[#0F1B2D]">Total {isRefunded ? 'refunded' : 'paid'}</span>
+              <span className="text-2xl font-extrabold text-[#0F1B2D]">RM{price.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
         <button
           onClick={() => window.print()}
-          className="w-full mt-4 bg-[#2B5D45] text-white py-2.5 rounded-full font-medium hover:bg-[#1F4634] print:hidden"
+          className="w-full h-12 mt-4 rounded-[10px] bg-[#0A7B83] text-white font-bold hover:bg-[#075A61] print:hidden"
         >
-          Print / Save as PDF
+          Print or save as PDF
         </button>
       </div>
-    </div>
+    </main>
   )
 }
