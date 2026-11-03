@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from './NotificationBell'
+import Logo from './Logo'
 
 type IconName = 'search' | 'book' | 'dashboard' | 'shield' | 'logout'
 
@@ -112,13 +113,8 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-30 bg-white border-b border-[#DDE2E8] print:hidden">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-[9px] bg-[#0A7B83] flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2z" />
-                <path d="M22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z" />
-              </svg>
-            </span>
+          <Link href="/" className="flex items-center gap-2.5" aria-label="MyOnlineCikgu home">
+            <Logo size={36} />
             <span className="font-extrabold text-[17px] tracking-tight text-[#0F1B2D]">MyOnlineCikgu</span>
           </Link>
 
