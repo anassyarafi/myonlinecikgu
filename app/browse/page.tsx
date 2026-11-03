@@ -48,10 +48,19 @@ const toneFor = (name: string) => {
 const levelLabel = (level: string) => (level === '' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1))
 
 function TutorPhoto({ name, url }: { name: string; url: string | null }) {
+  const [failed, setFailed] = useState(false)
   const tone = toneFor(name)
-  if (url) {
+
+  if (url && !failed) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={`Photo of ${name}`} className="w-full h-full object-cover" />
+    return (
+      <img
+        src={url}
+        alt={`Photo of ${name}`}
+        onError={() => setFailed(true)}
+        className="w-full h-full object-cover"
+      />
+    )
   }
   return (
     <div
@@ -81,6 +90,7 @@ export default function BrowsePage() {
   const [maxPrice, setMaxPrice] = useState('')
   const [tutorTypeFilter, setTutorTypeFilter] = useState('')
   const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({})
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const init = async () => {
@@ -107,7 +117,25 @@ export default function BrowsePage() {
         .order('scheduled_at')
 
       if (!error && data) {
-        setClasses(data as unknown as ClassListing[])
+        const listings = data as unknown as ClassListing[]
+        setClasses(listings)
+
+        const paths = Array.from(
+          new Set(listings.map((c) => c.tutor_profiles?.profile_photo_url).filter(Boolean))
+        ) as string[]
+
+        if (paths.length > 0) {
+          const { data: signed } = await supabase.storage
+            .from('tutor-uploads')
+            .createSignedUrls(paths, 3600)
+          if (signed) {
+            const map: Record<string, string> = {}
+            signed.forEach((s) => {
+              if (s.path && s.signedUrl) map[s.path] = s.signedUrl
+            })
+            setPhotoUrls(map)
+          }
+        }
       }
 
       const { data: reviewsData } = await supabase.from('reviews').select('tutor_id, rating')
@@ -357,11 +385,13 @@ export default function BrowsePage() {
                 const booking = bookings[c.id]
                 const tutorName = c.tutor_profiles?.profiles?.full_name ?? 'Unknown tutor'
                 const tutorRating = c.tutor_profiles?.id ? ratings[c.tutor_profiles.id] : undefined
+                const photoPath = c.tutor_profiles?.profile_photo_url
+                const photoUrl = photoPath ? photoUrls[photoPath] ?? null : null
 
                 return (
                   <article key={c.id} className="bg-white border border-[#DDE2E8] rounded-[14px] overflow-hidden flex flex-col">
                     <div className="relative h-40 bg-[#E6EAEE]">
-                      <TutorPhoto name={tutorName} url={c.tutor_profiles?.profile_photo_url ?? null} />
+                      <TutorPhoto name={tutorName} url={photoUrl} />
                       {c.tutor_profiles?.verified && (
                         <span className="absolute top-2.5 left-2.5 h-6 px-2 rounded-xl bg-white text-[#0A7B83] text-xs font-bold flex items-center gap-1">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -406,7 +436,7 @@ export default function BrowsePage() {
                         <span className="text-[15px] font-extrabold">RM{c.price}</span>
                       </div>
 
-                      <div className="mt-3 pt-1 mt-auto">
+                      <div className="mt-auto pt-3">
                         {!booking && (
                           <button
                             onClick={() => handleBookNow(c.id)}
