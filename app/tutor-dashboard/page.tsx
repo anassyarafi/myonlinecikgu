@@ -6,7 +6,14 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Subject = { id: string; name: string; education_level: string }
-type ClassItem = { id: string; title: string; scheduled_at: string; price: number; status: string }
+type ClassItem = {
+  id: string
+  title: string
+  scheduled_at: string
+  duration_minutes?: number | null
+  price: number
+  status: string
+}
 
 type BookingRow = {
   id: string
@@ -125,6 +132,8 @@ export default function TutorDashboard() {
   const [subjectId, setSubjectId] = useState('')
   const [title, setTitle] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
+  const [durationMinutes, setDurationMinutes] = useState('60')
+  const [teaching, setTeaching] = useState<{ hours: number; classes: number }>({ hours: 0, classes: 0 })
   const [price, setPrice] = useState('')
   const [classes, setClasses] = useState<ClassItem[]>([])
 
@@ -234,6 +243,18 @@ export default function TutorDashboard() {
         .order('requested_at', { ascending: false })
 
       setPayouts(payoutsData || [])
+
+      const { data: teachingData } = await supabase
+        .from('tutor_teaching_stats')
+        .select('hours_taught, classes_taught')
+        .eq('tutor_id', user.id)
+        .maybeSingle()
+      if (teachingData) {
+        setTeaching({
+          hours: Number(teachingData.hours_taught) || 0,
+          classes: Number(teachingData.classes_taught) || 0,
+        })
+      }
 
       setLoading(false)
     }
@@ -386,6 +407,7 @@ export default function TutorDashboard() {
         subject_id: subjectId,
         title,
         scheduled_at: scheduledAt,
+        duration_minutes: Number(durationMinutes) || 60,
         price: Number(price) || 0,
       })
       .select()
@@ -399,6 +421,7 @@ export default function TutorDashboard() {
     setClasses([...classes, data])
     setTitle('')
     setScheduledAt('')
+    setDurationMinutes('60')
     setPrice('')
     showNotice('success', 'Class created. Students can now book it.')
   }
@@ -466,7 +489,6 @@ export default function TutorDashboard() {
 
   const now = new Date()
   const upcomingCount = classes.filter((c) => new Date(c.scheduled_at) >= now).length
-  const completedCount = classes.filter((c) => new Date(c.scheduled_at) < now).length
   const activeStudents = new Set(paidBookings.map((b) => b.student_id)).size
 
   const totalRequested = payouts.reduce((sum, p) => sum + p.amount, 0)
@@ -522,8 +544,14 @@ export default function TutorDashboard() {
             <p className="text-[22px] font-extrabold mt-1">{activeStudents}</p>
           </div>
           <div className="bg-white border border-[#DDE2E8] rounded-[14px] p-4">
-            <p className="text-[13px] text-[#566274]">Completed classes</p>
-            <p className="text-[22px] font-extrabold mt-1">{completedCount}</p>
+            <p className="text-[13px] text-[#566274]">Hours taught</p>
+            <p className="text-[22px] font-extrabold mt-1">
+              {Math.round(teaching.hours * 10) / 10}
+              <span className="text-sm font-semibold text-[#566274]"> hrs</span>
+            </p>
+            <p className="text-[12px] text-[#566274] mt-0.5">
+              {teaching.classes} paid {teaching.classes === 1 ? 'class' : 'classes'} completed
+            </p>
           </div>
         </div>
 
@@ -728,6 +756,26 @@ export default function TutorDashboard() {
                   </div>
 
                   <div>
+                    <label htmlFor="class-length" className={labelClass}>Class length</label>
+                    <select
+                      id="class-length"
+                      value={durationMinutes}
+                      onChange={(e) => setDurationMinutes(e.target.value)}
+                      className={fieldClass}
+                    >
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="90">1 hour 30 minutes</option>
+                      <option value="120">2 hours</option>
+                      <option value="180">3 hours</option>
+                    </select>
+                    <p className="text-[13px] text-[#566274] mt-1.5">
+                      Students see your total teaching hours, so set this to the real length.
+                    </p>
+                  </div>
+
+                  <div>
                     <label htmlFor="class-price" className={labelClass}>Price</label>
                     <div className="flex items-center h-12 rounded-[10px] border border-[#C5CDD6] bg-white overflow-hidden focus-within:border-[#0A7B83] focus-within:ring-4 focus-within:ring-[#E1F1F2]">
                       <span className="self-stretch flex items-center px-3.5 bg-[#F3F5F7] border-r border-[#C5CDD6] text-sm font-bold text-[#566274]">
@@ -891,7 +939,9 @@ export default function TutorDashboard() {
                       <li key={c.id} className="py-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-semibold text-[15px]">{c.title}</p>
-                          <p className="text-[13px] text-[#566274] mt-0.5">{formatDate(c.scheduled_at)}</p>
+                          <p className="text-[13px] text-[#566274] mt-0.5">
+                            {formatDate(c.scheduled_at)} · {c.duration_minutes ?? 60} min
+                          </p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-extrabold text-[15px]">RM{c.price}</p>

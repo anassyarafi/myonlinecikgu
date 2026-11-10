@@ -9,6 +9,7 @@ type ClassListing = {
   id: string
   title: string
   scheduled_at: string
+  duration_minutes: number | null
   price: number
   status: string
   subjects: { name: string; education_level: string } | null
@@ -43,6 +44,18 @@ const initialsOf = (name: string) =>
 const toneFor = (name: string) => {
   const sum = name.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0)
   return tones[sum % tones.length]
+}
+
+const formatHours = (hours: number) => {
+  const rounded = Math.round(hours * 10) / 10
+  return `${rounded} ${rounded === 1 ? 'hr' : 'hrs'}`
+}
+
+const formatLength = (minutes: number | null) => {
+  const m = minutes ?? 60
+  if (m < 60) return `${m} min`
+  const h = m / 60
+  return `${Number.isInteger(h) ? h : h.toFixed(1)} ${h === 1 ? 'hr' : 'hrs'}`
 }
 
 const levelLabel = (level: string) => (level === '' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1))
@@ -91,6 +104,7 @@ export default function BrowsePage() {
   const [tutorTypeFilter, setTutorTypeFilter] = useState('')
   const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({})
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  const [teaching, setTeaching] = useState<Record<string, { hours: number; classes: number }>>({})
 
   useEffect(() => {
     const init = async () => {
@@ -130,7 +144,7 @@ export default function BrowsePage() {
       const { data, error } = await supabase
         .from('classes')
         .select(
-          'id, title, scheduled_at, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, tutor_type, verified, profile_photo_url, profiles(full_name))'
+          'id, title, scheduled_at, duration_minutes, price, status, subjects(name, education_level), tutor_profiles(id, hourly_rate, qualification, tutor_type, verified, profile_photo_url, profiles(full_name))'
         )
         .eq('status', 'open')
         .gt('scheduled_at', new Date().toISOString())
@@ -171,6 +185,20 @@ export default function BrowsePage() {
           avgMap[tutorId] = { avg: sum / ratingsArr.length, count: ratingsArr.length }
         })
         setRatings(avgMap)
+      }
+
+      const { data: teachingData } = await supabase
+        .from('tutor_teaching_stats')
+        .select('tutor_id, hours_taught, classes_taught')
+      if (teachingData) {
+        const teachingMap: Record<string, { hours: number; classes: number }> = {}
+        teachingData.forEach((t) => {
+          teachingMap[t.tutor_id] = {
+            hours: Number(t.hours_taught) || 0,
+            classes: Number(t.classes_taught) || 0,
+          }
+        })
+        setTeaching(teachingMap)
       }
 
       setLoading(false)
@@ -407,6 +435,7 @@ export default function BrowsePage() {
                 const booking = bookings[c.id]
                 const tutorName = c.tutor_profiles?.profiles?.full_name ?? 'Unknown tutor'
                 const tutorRating = c.tutor_profiles?.id ? ratings[c.tutor_profiles.id] : undefined
+                const tutorTeaching = c.tutor_profiles?.id ? teaching[c.tutor_profiles.id] : undefined
                 const photoPath = c.tutor_profiles?.profile_photo_url
                 const photoUrl = photoPath ? photoUrls[photoPath] ?? null : null
 
@@ -426,6 +455,15 @@ export default function BrowsePage() {
 
                     <div className="p-3 flex flex-col gap-1 flex-1">
                       <h2 className="text-[15px] font-bold text-[#0F1B2D]">{tutorName}</h2>
+                      <p className="flex items-center gap-1 text-[12px] font-semibold text-[#075A61]">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 2" />
+                        </svg>
+                        {tutorTeaching && tutorTeaching.hours > 0
+                          ? `${formatHours(tutorTeaching.hours)} taught`
+                          : 'New tutor'}
+                      </p>
                       <p className="text-[13px] text-[#566274] line-clamp-2">{c.title}</p>
                       <p className="text-[13px] text-[#566274]">
                         {c.subjects?.name}
@@ -439,6 +477,7 @@ export default function BrowsePage() {
                           hour: 'numeric',
                           minute: '2-digit',
                         })}
+                        {` · ${formatLength(c.duration_minutes)}`}
                       </p>
 
                       <div className="flex items-center justify-between mt-2">
