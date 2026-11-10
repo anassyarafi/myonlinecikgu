@@ -111,7 +111,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white border-b border-[#DDE2E8] print:hidden">
+      <header className="sticky top-0 z-30 bg-white border-b border-[#DDE2E8] pt-[var(--safe-area-inset-top,env(safe-area-inset-top,0px))] print:hidden">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2.5" aria-label="MyOnlineCikgu home">
             <Logo size={36} />
@@ -165,7 +165,7 @@ export default function Navbar() {
       {ready && userId && !hideTabBar && (
         <nav
           aria-label="Main"
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#DDE2E8] pb-[env(safe-area-inset-bottom)] flex print:hidden"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#DDE2E8] pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] flex print:hidden"
         >
           {links.map((l) => {
             const active = isActive(l.href)
